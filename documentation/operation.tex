@@ -1,4 +1,4 @@
-% Created 2018-02-21 mer. 17:06
+% Created 2018-02-21 mer. 17:15
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -73,15 +73,18 @@ cd
 Ici le retour est beaucoup plus verbose: pas mal de warnings mais à
 la fin, on voit:
 
+
+\begin{verbatim}
 Load kernel modules
 Create configuration file gpg2x72c.conf
 ====================================================================
  Ref.ID | Model                          | RSW1 |  Type | Device No.  
-\hrule
+--------------------------------------------------------------------
       1 | PEX-292144                     |    0 |    DI |    17
-\hrule
+--------------------------------------------------------------------
       2 | PEX-292144                     |    0 |    DO |    18
 ====================================================================
+\end{verbatim}
 
 Tout est bon. Les drivers sont chargés et on peut commencer à
 intéragir avec le matériel.
@@ -105,7 +108,9 @@ alpao_server &
 Le serveur du DM est pour le moment discret et n'écrit pas grand
 chose après ses messages initiaux:
 
-Use x86$_{\mathrm{64}}$ libraries.
+
+\begin{verbatim}
+Use x86_64 libraries.
 /tmp/dmdisp0.im.shm will be created or overwritten
 /tmp/dmdisp1.im.shm will be created or overwritten
 /tmp/dmdisp2.im.shm will be created or overwritten
@@ -114,7 +119,8 @@ Use x86$_{\mathrm{64}}$ libraries.
 /tmp/dmdisp5.im.shm will be created or overwritten
 /tmp/dmdisp6.im.shm will be created or overwritten
 /tmp/dmdisp7.im.shm will be created or overwritten
-/tmp/ciao$_{\mathrm{dm}}$$_{\mathrm{disp}}$.im.shm will be created or overwritten
+/tmp/ciao_dm_disp.im.shm will be created or overwritten
+\end{verbatim}
 
 On peut visualiser les 8 channels du DM simultanément avec un petit
 programme:

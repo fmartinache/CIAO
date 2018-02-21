@@ -35,6 +35,7 @@ cd
 Ici le retour est beaucoup plus verbose: pas mal de warnings mais à
 la fin, on voit:
 
+#+begin_src text
 Load kernel modules
 Create configuration file gpg2x72c.conf
 ====================================================================
@@ -44,6 +45,7 @@ Create configuration file gpg2x72c.conf
 --------------------------------------------------------------------
       2 | PEX-292144                     |    0 |    DO |    18
 ====================================================================
+#+end_src 
 
 Tout est bon. Les drivers sont chargés et on peut commencer à
 intéragir avec le matériel.
@@ -64,6 +66,7 @@ alpao_server &
 Le serveur du DM est pour le moment discret et n'écrit pas grand
 chose après ses messages initiaux:
 
+#+begin_src text
 Use x86_64 libraries.
 /tmp/dmdisp0.im.shm will be created or overwritten
 /tmp/dmdisp1.im.shm will be created or overwritten
@@ -74,6 +77,7 @@ Use x86_64 libraries.
 /tmp/dmdisp6.im.shm will be created or overwritten
 /tmp/dmdisp7.im.shm will be created or overwritten
 /tmp/ciao_dm_disp.im.shm will be created or overwritten
+#+end_src
 
 On peut visualiser les 8 channels du DM simultanément avec un petit
 programme:
