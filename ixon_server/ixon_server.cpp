@@ -4,8 +4,9 @@
    on a named pipe (aka a fifo, for "first in, first out") and executes them
    assuming that the command is valid.
    
-   The goal of this version is to implement the revised shared memory data
-   structure developed during the summer 2017.
+   Implement the revised shared memory data structure developed during
+   the summer 2017.
+
 
    Frantz Martinache.
    ========================================================================= */
@@ -83,8 +84,8 @@ char conf_name[LINESZ] = "config.xml";   // OptAcqr config file
 char myfifoin[LINESZ] = "/home/ciaodev/bin/ixon_fifo_in";  // out-going pipe
 char myfifout[LINESZ] = "/home/ciaodev/bin/ixon_fifo_out"; // out-going pipe
 
-int first_im = 0;
-int last_im = 0;
+//int first_im = 0;
+//int last_im = 0;
 
 // size_t shm_size = 0;                     // shared memory size in bytes
 // int fd_shm = -1;                         // file descriptor for shared memory
@@ -137,6 +138,12 @@ void* acquire(void *params) { // camera acquisition thread
   struct tm* ptm;
   float *timing = (float*) malloc(nfr * sizeof(float));
 
+  int first_im, last_im;       // indices for avail. images in circ buffer
+  int last_read_im;            // index of last read image
+  int first_valid, last_valid; // indices of valid images
+  unsigned long error;         // error code
+
+  last_read_im = -1;           // keep track of last read image index
   for (ifr = 0; ifr < nfr; ifr++) timing[ifr] = 0.1; // init timing array
   ifr = 1;
 
@@ -149,31 +156,39 @@ void* acquire(void *params) { // camera acquisition thread
   
   while (camconf->nleft > 0) {
 
-    clock_gettime(CLOCK_REALTIME, &now);
-    ptm = gmtime(&(now.tv_sec));
-    t1 = (float)(now.tv_nsec)*1e-9 + (float)(ptm->tm_sec);
+    GetNumberNewImages(&first_im, &last_im);
 
-    // estimate the frame rate
-    timing[ifr] = t1-t0;
-    t0 = t1;
-    ifr++;
-    if (ifr == nfr) ifr = 0;
 
-    ifrate = 0.0;
-    for (int i = 0; i < nfr; i++)
-      ifrate += timing[i];
-    ifrate = (float)(nfr) / ifrate;
+    if (last_im > last_read_im) { // a new image is available!
+      last_read_im = last_im;
 
-    //Loop until acquisition finished
-    GetStatus(&status);
-    //while(status==DRV_ACQUIRING) GetStatus(&status);
+      // what is the time ??
+      clock_gettime(CLOCK_REALTIME, &now);
+      ptm = gmtime(&(now.tv_sec));
+      t1 = (float)(now.tv_nsec)*1e-9 + (float)(ptm->tm_sec);
 
-    // write to shared memory
-    imarray[0].md[0].write = 1;                  // signal you are about to write
-    GetMostRecentImage(imarray[0].array.SI32, nel); // direct write to SHM
-    imarray[0].md[0].write = 0;                  // signal done writing data
-    imarray[0].md[0].cnt0 ++;                    // increment counter!
-    imarray[0].md[0].cnt1 ++;                    // increment counter!
+      // estimate the frame rate
+      timing[ifr] = t1-t0;
+      t0 = t1;
+      ifr++;
+      if (ifr == nfr) ifr = 0;
+      
+      ifrate = 0.0;
+      for (int i = 0; i < nfr; i++)
+	ifrate += timing[i];
+      ifrate = (float)(nfr) / ifrate;
+
+
+      // write to shared memory
+      imarray[0].md[0].write = 1;                  // signal you are about to write
+      error = GetImages(last_im, last_im, 
+			imarray[0].array.SI32, nel, &first_valid, &last_valid);
+      imarray[0].md[0].write = 0;                  // signal done writing data
+      imarray[0].md[0].cnt0 ++;                    // increment counter!
+      imarray[0].md[0].cnt1 ++;                    // increment counter!
+
+      idisp++;
+    }
 
     // check for abort
     if (camconf->babort) {
@@ -182,18 +197,14 @@ void* acquire(void *params) { // camera acquisition thread
       camconf->babort = false;
     }
 
-    idisp++;
     if (idisp == ndisp) {
-      printf("\r%02d Image [%9ld] frame rate = %.3f Hz, status code = %d", 
-	     idisp, imarray[0].md[0].cnt0, ifrate, status);
+      printf("\r%02d Image [%9ld] (i0=%6d,i1=%6d) frame rate = %.3f Hz, error code = %ld", 
+	     idisp, imarray[0].md[0].cnt0, first_im, last_im, ifrate, error);
       fflush(stdout);
       idisp = 0;
     }
 
-    //GetNumberNewImages(&first_im, &last_im);
-    //printf("  indices = %d %d", first_im, last_im);
-
-    msleep(5); // sleep in milli-seconds
+    //msleep(1); // sleep in milli-seconds
     if (!camconf->bstreamon) camconf->nleft--; // decrement if NOT streaming
   }
   printf("\n");
@@ -319,7 +330,7 @@ int main(int argc, char* argv[]) {
   // ====================================================================
 
   amp_type    = 0; // type of output amplification (1: conventional, 0: EMCCD)
-  adc_channel = 1; //
+  adc_channel = 0; //
 
   error = SetOutputAmplifier(amp_type);
   error = SetADChannel(adc_channel);
@@ -356,6 +367,8 @@ int main(int argc, char* argv[]) {
   // ------------------------------------------
   //    special setup for the temperature
   // ------------------------------------------
+
+  /*
   state = CoolerON();
   cout << "CoolerON status code: " << state << endl;
 
@@ -390,6 +403,7 @@ int main(int argc, char* argv[]) {
   default:
     cout << "Cooler status unknown" << endl;
   }
+  */
 
   // ------------------------------------------------
   // create pipes for interaction with other programs
