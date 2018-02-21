@@ -1,0 +1,155 @@
+#!/usr/bin/env python
+
+import numpy as np
+import os, sys, time
+import struct
+
+home = os.getenv('HOME')
+sys.path.append(home+'/src/python/libs/')
+
+import xaosim.zernike as zernike
+from xaosim.shmlib import shm
+
+if (8 * struct.calcsize("P")) == 32:
+    print("Use x86 libraries.")
+    sys.path.append(home+"/python/libs/alpao/Lib/")
+else:
+    print("Use x86_64 libraries.")
+sys.path.append(home+"/python/libs/alpao/Lib64/")
+
+from asdk import DM
+
+# ==============================
+#      CONNECT TO THE DM
+# ==============================
+seri_num = "BOL115"              # DM serial number
+alpao    = DM(seri_num)          # the reference to the DM
+nbAct    = int( alpao.Get('NBOfActuator') )
+alpao.Send([0.] * nbAct)         # init the DM: zeroes everywhere
+dms = 11                         # DM size in elements over the pupil (actual is 11)
+
+# ==============================
+#      CREATE A DM MAP
+# ==============================
+mask = np.ones((dms, dms), dtype=np.float32) # to remove non-existing actuators
+mask[:3,0] = np.nan
+mask[0,:3] = np.nan
+mask[1, 1] = np.nan
+mask[-3:,0] = np.nan
+mask[-1,:3] = np.nan
+mask[-2,1]  = np.nan
+mask[0,-3:] = np.nan
+mask[1,-2:] = np.nan
+mask[2,-1]  = np.nan
+mask[-1,-3:] = np.nan
+mask[-2,-2:] = np.nan
+mask[-3,-1]  = np.nan
+
+flat_mask = mask.flatten()
+
+# ================================================
+#  SETUP MULTI-CHANNEL SHARED MEMORY DM STRUCTURE
+# ================================================
+
+nch     = 8  # number of DM channels
+dmd0    = np.zeros((dms,  dms), dtype=np.float32) # initial dm disp map
+sm_cntr = np.zeros(nch+1) - 1                     # shared mem counters for channels
+
+# create/access shared memory data structures
+# -------------------------------------------
+
+for i in xrange(nch):
+    exec "disp%d = shm(fname='/tmp/dmdisp%d.im.shm', data=dmd0, verbose=False)" % (i,i)
+
+disp = shm('/tmp/ciao_dm_disp.im.shm',  data=dmd0, verbose=False)
+
+time.sleep(0.01)
+keepgoing = True
+
+# ===============================================================
+def get_counter_channel(chn):
+    ''' ----------------------------------------
+    Return the current channel counter value.
+    Reads from the already-opened shared memory
+    data structure.
+    ---------------------------------------- '''
+    if chn < 8:
+        exec "cnt = disp%d.get_counter()" % (chn,)
+    else: # chn == 8:
+        cnt = disp.get_counter()
+    return cnt
+
+# ===============================================================
+def map2dm(cmap):
+    ''' --------------------------------------------
+    Sends a 2D command to the DM, using the mapping
+    knowledge provided by the flat_mask array.
+    -------------------------------------------- ''' 
+    global flat_mask, nbAct, alpao
+    temp   = cmap.flatten()
+    values = [0.0] * nbAct # data to be uploaded to the DM
+
+    jj = 0
+    for i in xrange(cmap.size):
+        if not np.isnan(flat_mask[i]):
+            values[jj] = temp[i]
+            jj += 1
+
+    alpao.Send(values)
+    return()
+
+# ===========================================================
+def list2map2D(data):
+    ''' ------------------------------------------------
+    Convert a list of 97 voltages back into a 2D map for
+    easy 2D representation.
+    ------------------------------------------------ '''
+    global flat_mask, nbAct
+    res = np.zeros((dms,  dms), dtype=np.float32)
+
+    i0 = 0
+    for k in xrange(dms*dms):
+        if not np.isnan(flat_mask[k]):
+            i = k / dms
+            j = k % dms
+            res[i,j] = data[i0]
+            i0 += 1
+    return(res)
+
+
+data = np.loadtxt('/home/ciaodev/bin/zygo_flat.txt')
+disp0.set_data(list2map2D(data))
+
+updt = True
+# ===========================================================
+#                  MAIN EVENT LOOP
+# ===========================================================
+while keepgoing:
+
+    for i in xrange(nch+1):
+        test = get_counter_channel(i)
+        if test != sm_cntr[i]:
+            sm_cntr[i] = test
+            updt = True
+
+    if updt == True:
+        updt = False
+        combi = np.zeros_like(disp.get_data())
+        for i in xrange(nch):
+            exec "combi += disp%d.get_data()" % (i,)
+            
+        disp.set_data(combi)
+        map2dm(combi)
+        #time.sleep(0.001)
+
+    if os.path.exists(home+'/bin/dm_stop'):
+        keepgoing = False
+        os.remove(home+'/bin/dm_stop')
+
+    time.sleep(0.001)
+
+# ===========================================================
+#                  FINISH THINGS CLEANLY
+# ===========================================================
+alpao.Reset()
+sys.exit()

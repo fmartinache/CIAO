@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+
+import socket
+import time
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+time.sleep(0.1)
+s.connect(('10.150.10.18', 3737))
+time.sleep(0.5)
+s.settimeout(0.5)
+s.send('#TCS_GET_POINTING_INFO:?\r')
+#s.send('#TCS_SET_GUIDING_OFFSETS: 2.0 0.0?\r')
+test = s.recv(1024)
+print test
+s.close()
+
