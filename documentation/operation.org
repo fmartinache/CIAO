@@ -1,0 +1,181 @@
+#+TITLE: Mise en route de CIAO
+#+AUTHOR: Frantz Martinache
+
+* Après un reboot de l'ordinateur
+
+Normalement, la machine devrait avoir démarré sous Linux. Si ça n'est
+pas le cas, je me demande bien comment vous faites pour lire ces
+quelques lignes de toute façon.
+
+Après un reboot, il faut mettre en route les drivers de la carte de
+controle de la caméra iXon et du DM ALPAO. La procédure pourrait etre
+automatisée mais où serait le fun là dedans? Pour impressionner les
+touristes, il faut lancer des commandes dans un terminal, qui
+affichent plein de messages compliqués.
+
+** To start the driver for the camera:
+
+#+begin_src sh
+cd /home/ciaodev/Documents/CIAO/Andor_SDK/V2.99.30002.0/andor/script/
+sudo bash ./andordrvlx_load
+#+end_src
+
+Rien de très impressionnant ici: la commande renvoit un simple:
+
+"andor driver installed"
+
+** To start the DM driver again:
+
+#+begin_src sh
+cd /home/ciaodev/src/driver_DM/
+sudo bash ./install.sh
+cd
+#+end_src
+
+Ici le retour est beaucoup plus verbose: pas mal de warnings mais à
+la fin, on voit:
+
+Load kernel modules
+Create configuration file gpg2x72c.conf
+====================================================================
+ Ref.ID | Model                          | RSW1 |  Type | Device No.  
+--------------------------------------------------------------------
+      1 | PEX-292144                     |    0 |    DI |    17
+--------------------------------------------------------------------
+      2 | PEX-292144                     |    0 |    DO |    18
+====================================================================
+
+Tout est bon. Les drivers sont chargés et on peut commencer à
+intéragir avec le matériel.
+
+* Lancement des serveurs de controle du matos
+
+Après les drivers, il faut lancer les serveurs pour le DM et la
+caméra. Le plus simple, c'est de mettre le DM en route en premier.
+
+** Miroir déformable
+
+La commande qui lance le serveur du DM est:
+
+#+begin_src sh
+alpao_server &
+#+end_src
+
+Le serveur du DM est pour le moment discret et n'écrit pas grand
+chose après ses messages initiaux:
+
+Use x86_64 libraries.
+/tmp/dmdisp0.im.shm will be created or overwritten
+/tmp/dmdisp1.im.shm will be created or overwritten
+/tmp/dmdisp2.im.shm will be created or overwritten
+/tmp/dmdisp3.im.shm will be created or overwritten
+/tmp/dmdisp4.im.shm will be created or overwritten
+/tmp/dmdisp5.im.shm will be created or overwritten
+/tmp/dmdisp6.im.shm will be created or overwritten
+/tmp/dmdisp7.im.shm will be created or overwritten
+/tmp/ciao_dm_disp.im.shm will be created or overwritten
+
+On peut visualiser les 8 channels du DM simultanément avec un petit
+programme:
+
+#+begin_src sh
+dmview &
+#+end_src
+
+qui devrait afficher une fenetre simple avec 2x5 panels dont seuls
+les #0 et #8 affichent quelquechose. Ce qui est appliqué sur le #0
+c'est le flat qui a été établi après réception du DM devant
+l'interféromètre de Zygo.
+
+** la caméra iXon
+
+Pour lancer le serveur de controle de la caméra la commande est:
+
+#+begin_src sh
+ixon_server
+#+end_src
+
+Si tout se passe bien, on entend assez vite le bruit du shutter de la
+caméra. Mais il va falloir attendre un peu. En attendant, je vous
+raconte une histoire:
+
+Ici, j'évite le & à la fin de la commande: le serveur affiche
+quelquefois des choses (lorsqu'on change le temps d'intégration par
+exemple): une fois que le serveur est lancé, le terminal qui l'a
+lancé est condamné à rester ouvert. Une solution c'est de lancer la
+meme commande depuis un terminal SCREEN (qui est installé sur la
+machine). L'intéret de ce terminal est qu'il peut etre détaché mais
+il vaut mieux etre familier avec ces raccourcis bizarres comme: Ctrl-A
+Ctrl-D, ... donc ici, j'évite.
+
+Le serveur de la caméra commence par mettre le détecteur à
+température. La consigne pour le moment est -5 degrés Celcius. Ca
+peut prendre plusieurs minutes. Mais à un moment, il va dire:
+
+"iXon sever ready."
+
+La fete peut donc enfin commencer!
+
+* Lancement du logiciel de controle de l'AO
+
+Dans un nouveau terminal, ou un nouvel onglet du terminal en cours
+(créé en appuyant sur Ctrl-Shift T, ou alors avec un clic droit sur la
+fenetre du terminal), il faut lancer la commande suivante:
+
+#+begin_src sh
+ciao_control /tmp/ixon.im.shm
+#+end_src
+
+qui lance le GUI de controle de l'AO. Comme la caméra n'a encore pas
+fait d'acquisition, tout est à zero, nan, vide... mais il suffit
+d'appuyer sur le bouton "STREAM" dans le panel gauche du GUI pour que
+la situation change!
+
+Le GUI est plus ou moins organisé en 3 panels:
+
+- à gauche, c'est le controle de la caméra
+- au milieu, c'est la paramétrisation de l'ASO
+- à droite, c'est le controle de divers asservissements
+
+** controle de la caméra
+
+Tout se passe dans le panel gauche.
+
+** paramétrisation de l'utilisation du WFS
+
+** controle de front d'onde
+* Arret de la manipe
+
+** Serveur de la camera
+
+Il faut lui envoyer la commande "quit". Plusieurs façons de faire:
+
+1. en ligne de commande, il faut écrire:
+
+>> echo "quit" > /home/ciaodev/bin/ixon_fifo_in
+
+2. utiliser un petit outil graphique:
+
+depuis un terminal:
+
+>> ixon_ctrl
+
+Et appuyer sur le bouton "quit".
+
+Dans tous les cas, on entend le shutter de la caméra qui se baisse et
+le refroidissement qui s'arrete. Tout est plus silencieux.
+
+** Serveur du DM
+
+Pour le moment, seulement une possibilité en ligne de commande:
+
+>> touch /home/ciaodev/bin/dm_stop
+
+
+
+** shutdown
+- Débrancher du secteur l'alim du refroidissement de la camera
+- éteindre le boitier d'alim du DM (inter à l'arrière du boitier)
+- shutdown de l'ordinateur
+
+

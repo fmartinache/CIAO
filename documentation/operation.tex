@@ -1,0 +1,238 @@
+% Created 2018-02-21 mer. 17:06
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{soul}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{latexsym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\tolerance=1000
+\providecommand{\alert}[1]{\textbf{#1}}
+
+\title{Mise en route de CIAO}
+\author{Frantz Martinache}
+\date{\today}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs Org-mode version 7.9.3f}}
+
+\begin{document}
+
+\maketitle
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+\vspace*{1cm}
+
+\section{Après un reboot de l'ordinateur}
+\label{sec-1}
+
+
+Normalement, la machine devrait avoir démarré sous Linux. Si ça n'est
+pas le cas, je me demande bien comment vous faites pour lire ces
+quelques lignes de toute façon.
+
+Après un reboot, il faut mettre en route les drivers de la carte de
+controle de la caméra iXon et du DM ALPAO. La procédure pourrait etre
+automatisée mais où serait le fun là dedans? Pour impressionner les
+touristes, il faut lancer des commandes dans un terminal, qui
+affichent plein de messages compliqués.
+\subsection{To start the driver for the camera:}
+\label{sec-1-1}
+
+
+
+\begin{verbatim}
+cd /home/ciaodev/Documents/CIAO/Andor_SDK/V2.99.30002.0/andor/script/
+sudo bash ./andordrvlx_load
+\end{verbatim}
+
+Rien de très impressionnant ici: la commande renvoit un simple:
+
+``andor driver installed''
+\subsection{To start the DM driver again:}
+\label{sec-1-2}
+
+
+
+\begin{verbatim}
+cd /home/ciaodev/src/driver_DM/
+sudo bash ./install.sh
+cd
+\end{verbatim}
+
+Ici le retour est beaucoup plus verbose: pas mal de warnings mais à
+la fin, on voit:
+
+Load kernel modules
+Create configuration file gpg2x72c.conf
+====================================================================
+ Ref.ID | Model                          | RSW1 |  Type | Device No.  
+\hrule
+      1 | PEX-292144                     |    0 |    DI |    17
+\hrule
+      2 | PEX-292144                     |    0 |    DO |    18
+====================================================================
+
+Tout est bon. Les drivers sont chargés et on peut commencer à
+intéragir avec le matériel.
+\section{Lancement des serveurs de controle du matos}
+\label{sec-2}
+
+
+Après les drivers, il faut lancer les serveurs pour le DM et la
+caméra. Le plus simple, c'est de mettre le DM en route en premier.
+\subsection{Miroir déformable}
+\label{sec-2-1}
+
+
+La commande qui lance le serveur du DM est:
+
+
+\begin{verbatim}
+alpao_server &
+\end{verbatim}
+
+Le serveur du DM est pour le moment discret et n'écrit pas grand
+chose après ses messages initiaux:
+
+Use x86$_{\mathrm{64}}$ libraries.
+/tmp/dmdisp0.im.shm will be created or overwritten
+/tmp/dmdisp1.im.shm will be created or overwritten
+/tmp/dmdisp2.im.shm will be created or overwritten
+/tmp/dmdisp3.im.shm will be created or overwritten
+/tmp/dmdisp4.im.shm will be created or overwritten
+/tmp/dmdisp5.im.shm will be created or overwritten
+/tmp/dmdisp6.im.shm will be created or overwritten
+/tmp/dmdisp7.im.shm will be created or overwritten
+/tmp/ciao$_{\mathrm{dm}}$$_{\mathrm{disp}}$.im.shm will be created or overwritten
+
+On peut visualiser les 8 channels du DM simultanément avec un petit
+programme:
+
+
+\begin{verbatim}
+dmview &
+\end{verbatim}
+
+qui devrait afficher une fenetre simple avec 2x5 panels dont seuls
+les \#0 et \#8 affichent quelquechose. Ce qui est appliqué sur le \#0
+c'est le flat qui a été établi après réception du DM devant
+l'interféromètre de Zygo.
+\subsection{la caméra iXon}
+\label{sec-2-2}
+
+
+Pour lancer le serveur de controle de la caméra la commande est:
+
+
+\begin{verbatim}
+ixon_server
+\end{verbatim}
+
+Si tout se passe bien, on entend assez vite le bruit du shutter de la
+caméra. Mais il va falloir attendre un peu. En attendant, je vous
+raconte une histoire:
+
+Ici, j'évite le \& à la fin de la commande: le serveur affiche
+quelquefois des choses (lorsqu'on change le temps d'intégration par
+exemple): une fois que le serveur est lancé, le terminal qui l'a
+lancé est condamné à rester ouvert. Une solution c'est de lancer la
+meme commande depuis un terminal SCREEN (qui est installé sur la
+machine). L'intéret de ce terminal est qu'il peut etre détaché mais
+il vaut mieux etre familier avec ces raccourcis bizarres comme: Ctrl-A
+Ctrl-D, \ldots{} donc ici, j'évite.
+
+Le serveur de la caméra commence par mettre le détecteur à
+température. La consigne pour le moment est -5 degrés Celcius. Ca
+peut prendre plusieurs minutes. Mais à un moment, il va dire:
+
+``iXon sever ready.''
+
+La fete peut donc enfin commencer!
+\section{Lancement du logiciel de controle de l'AO}
+\label{sec-3}
+
+
+Dans un nouveau terminal, ou un nouvel onglet du terminal en cours
+(créé en appuyant sur Ctrl-Shift T, ou alors avec un clic droit sur la
+fenetre du terminal), il faut lancer la commande suivante:
+
+
+\begin{verbatim}
+ciao_control /tmp/ixon.im.shm
+\end{verbatim}
+
+qui lance le GUI de controle de l'AO. Comme la caméra n'a encore pas
+fait d'acquisition, tout est à zero, nan, vide\ldots{} mais il suffit
+d'appuyer sur le bouton ``STREAM'' dans le panel gauche du GUI pour que
+la situation change!
+
+Le GUI est plus ou moins organisé en 3 panels:
+
+\begin{itemize}
+\item à gauche, c'est le controle de la caméra
+\item au milieu, c'est la paramétrisation de l'ASO
+\item à droite, c'est le controle de divers asservissements
+\end{itemize}
+\subsection{controle de la caméra}
+\label{sec-3-1}
+
+
+Tout se passe dans le panel gauche.
+\subsection{paramétrisation de l'utilisation du WFS}
+\label{sec-3-2}
+\subsection{controle de front d'onde}
+\label{sec-3-3}
+\section{Arret de la manipe}
+\label{sec-4}
+\subsection{Serveur de la camera}
+\label{sec-4-1}
+
+
+Il faut lui envoyer la commande ``quit''. Plusieurs façons de faire:
+
+\begin{enumerate}
+\item en ligne de commande, il faut écrire:
+\end{enumerate}
+
+>> echo ``quit'' > /home/ciaodev/bin/ixon$_{\mathrm{fifo}}$$_{\mathrm{in}}$
+
+\begin{enumerate}
+\item utiliser un petit outil graphique:
+\end{enumerate}
+
+depuis un terminal:
+
+>> ixon$_{\mathrm{ctrl}}$
+
+Et appuyer sur le bouton ``quit''.
+
+Dans tous les cas, on entend le shutter de la caméra qui se baisse et
+le refroidissement qui s'arrete. Tout est plus silencieux.
+\subsection{Serveur du DM}
+\label{sec-4-2}
+
+
+Pour le moment, seulement une possibilité en ligne de commande:
+
+>> touch /home/ciaodev/bin/dm$_{\mathrm{stop}}$
+\subsection{shutdown}
+\label{sec-4-3}
+
+\begin{itemize}
+\item Débrancher du secteur l'alim du refroidissement de la camera
+\item éteindre le boitier d'alim du DM (inter à l'arrière du boitier)
+\item shutdown de l'ordinateur
+\end{itemize}
+
+\end{document}
