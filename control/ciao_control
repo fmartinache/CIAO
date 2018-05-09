@@ -239,12 +239,12 @@ class MyWindow(QtGui.QMainWindow):
 
         self.threshold = 0          # threshold for photometry
         # --------------------
-        self.tt_a0 = 0.0            # tip-tilt loop calibration amplitude
+        self.tt_a0 = 0.05           # tip-tilt loop calibration amplitude
         self.tt_gain = 0.01         # tip-tilt loop gain
         self.ttx_mean = 0.0
         self.tty_mean = 0.0
         self.tt_abort_flag = False  # tip-tilt loop abort flag
-        self.ttx_mult = 0.03#0.03
+        self.ttx_mult = 0.03
         self.tty_mult = 0.03
 
         # --------------------
@@ -385,7 +385,7 @@ class MyWindow(QtGui.QMainWindow):
             
 
         try:
-            self.MM = pf.getdata('modal_response_matrix.fits')
+            self.MM = pf.getdata(conf_dir+'zonal_response_matrix.fits')
             self.MM[np.abs(self.MM) > 15.0] = 0.0
             U,S,Vh = np.linalg.svd(self.MM.T, full_matrices=0)
             iS1 = 1./S
@@ -395,11 +395,11 @@ class MyWindow(QtGui.QMainWindow):
             self.MMinv = Vh.T.dot(iS1).dot(U.T)
             print("Re-loaded existing zonal interaction matrix!")
         except:
-            print("PROBLEM matrix!")
+            print("No available zonal response matrix!")
             pass
 
         try:
-            self.SH_phot_ref = pf.getdata('zo_phot_ref.fits')
+            self.SH_phot_ref = pf.getdata(conf_dir+'zo_phot_ref.fits')
         except:
             print("No reference photometry preloaded: calib required!")
 
@@ -750,20 +750,19 @@ class MyWindow(QtGui.QMainWindow):
     def tt_calib(self):
         nav = 5
         ref = self.get_coadd(nav)
-        pf.writeto("img_ref.fits", ref, clobber=True)
+        pf.writeto(conf_dir+"img_ref.fits", ref, clobber=True)
         self.calc_SH_data(data=ref, ref=True)
         
         alpao_ttc.set_data(self.tt_a0 * xdm.astype('float32'))
         time.sleep(0.5)
         tt_x = self.get_coadd(nav)
-        pf.writeto('img_tt_x.fits', tt_x, clobber=True)
+        pf.writeto(conf_dir+'img_tt_x.fits', tt_x, clobber=True)
 
         time.sleep(0.5)
         alpao_ttc.set_data(self.tt_a0 * ydm.astype('float32'))
         time.sleep(0.5)
         tt_y = self.get_coadd(nav)
-        pf.writeto('img_tt_y.fits', tt_y, clobber=True)
-
+        pf.writeto(conf_dir+'img_tt_y.fits', tt_y, clobber=True)
 
         time.sleep(0.5)
         alpao_ttc.set_data(0.0 * ydm.astype('float32')) # back to no tip-tilt
@@ -773,8 +772,9 @@ class MyWindow(QtGui.QMainWindow):
         tty_resp = self.calc_slopes(data=tt_y)
         print(np.round(tty_resp, 1))
 
-        self.ttx_mult = self.tt_a0 / np.median(ttx_resp[0][self.SH_phot > self.threshold])
-        self.tty_mult = self.ttx_mult.copy()#self.tt_a0 / np.median(tty_resp[1][self.SH_phot > self.threshold])
+        self.ttx_mult = -self.tt_a0 / np.median(ttx_resp[0][self.SH_phot > self.threshold])
+        #self.tty_mult = self.ttx_mult.copy()#self.tt_a0 / np.median(tty_resp[1][self.SH_phot > self.threshold])
+        self.tty_mult = self.tt_a0 / np.median(tty_resp[1][self.SH_phot > self.threshold])
 
         print "!!!!!!!!"
         print np.median(ttx_resp[0][self.SH_phot > self.threshold])
@@ -857,7 +857,7 @@ class MyWindow(QtGui.QMainWindow):
         myqt.gui_call(self.pB_tt_cloop.setEnabled, True)
 
     # =========================================================
-    #                   Modal control
+    #                   Zonal control
     # =========================================================
     def update_zo_a0(self):
         self.zo_a0 = self.dspB_mm_a0.value()
@@ -1016,7 +1016,7 @@ class MyWindow(QtGui.QMainWindow):
         self.RR = np.array(RESP) / a0 # response is now 2D matrix
         self.RTR = np.dot(self.RR, self.RR.T)
 
-        pf.writeto('response_matrix.fits', self.RR, clobber=True)
+        pf.writeto(conf_dir+'zernike_response_matrix.fits', self.RR, clobber=True)
         print("Zernike calibration completed")
 
     # =========================================================
@@ -1038,7 +1038,7 @@ class MyWindow(QtGui.QMainWindow):
         # reference photometry for later weighting
         self.SH_phot_ref = self.SH_phot.copy()
         self.SH_phot_ref /= self.SH_phot_ref.max()
-        pf.writeto('zo_phot_ref.fits', self.SH_phot_ref, clobber=True)
+        pf.writeto(conf_dir+'zo_phot_ref.fits', self.SH_phot_ref, clobber=True)
 
         ref_phot         = np.append(self.SH_phot.flatten(), 
                                      self.SH_phot.flatten())
@@ -1075,7 +1075,7 @@ class MyWindow(QtGui.QMainWindow):
         iS1 = np.diag(iS1)
         self.MMinv = Vh.T.dot(iS1).dot(U.T)
 
-        pf.writeto('modal_response_matrix.fits', self.MM, clobber=True)
+        pf.writeto(conf_dir+'zonal_response_matrix.fits', self.MM, clobber=True)
         print("Zonal calibration complete!")
 
     # =========================================================

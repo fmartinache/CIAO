@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+
+''' --------------------------------------------------------------------
+python prototype for an intermediate piece of software between the 
+ixon_server and the control GUI that independantly monitors the ixon 
+and produces slopes and illumination maps for a pre-defined SH grid 
+set of properties.
+-------------------------------------------------------------------- '''
+
+import os
+import sys
+from xaosim.shmlib import shm
+
+conf_shmf = '/tmp/grid_data.im.shm'  # SH grid configuration SHM
+cam_shmf  = '/tmp/ixon.im.shm'       # iXon image SHM
+slx_shmf  = '/tmp/sh_slope_x.im.shm' # SH cells x-slope
+sly_shmf  = '/tmp/sh_slope_y.im.shm' # SH cells y-slope
+pht_shmf  = '/tmp/sh_phot.im.shm'    # SH cell illumination
+
+# ======================================================================
+# ======================================================================
+class SH_server():
+
+    def __init__(self, conf_shmf=None):
+        ''' --------------------------------------------------------
+        Class constructor.
+
+        If a valid configuration SHM is provided: loads it.
+        Otherwise, falls back on default values
+        -------------------------------------------------------- '''
+        self.x0 = 0
+        self.y0 = 0
+        self.dx = 12.5
+        self.dy = 12.5
+
+        if os.path.exists(conf_shmf):
+            # place - holder for later
+            #conf = shm(conf_shmf)
+            pass
+        else:
+            print("Default config used")
+
+# ======================================================================
+# ======================================================================
+if __name__ == "__main__":
+    server = SH_server(sys.argv[1:])
