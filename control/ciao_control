@@ -36,7 +36,11 @@ plt.show()
 
 import pdb
 import time
-import pyfits as pf
+
+try:
+    import astropy.io.fits as pf
+except:
+    import pyfits as pf
 
 import socket # for off-load to TCS
 
@@ -750,36 +754,36 @@ class MyWindow(QtGui.QMainWindow):
     def tt_calib(self):
         nav = 5
         ref = self.get_coadd(nav)
-        pf.writeto(conf_dir+"img_ref.fits", ref, clobber=True)
+
+        dm0 = alpao_ttc.get_data()
+        pf.writeto(conf_dir+"img_ref.fits", ref, overwrite=True)
         self.calc_SH_data(data=ref, ref=True)
         
-        alpao_ttc.set_data(self.tt_a0 * xdm.astype('float32'))
+        alpao_ttc.set_data(dm0 + self.tt_a0 * xdm)
         time.sleep(0.5)
         tt_x = self.get_coadd(nav)
-        pf.writeto(conf_dir+'img_tt_x.fits', tt_x, clobber=True)
+        pf.writeto(conf_dir+'img_tt_x.fits', tt_x, overwrite=True)
 
-        time.sleep(0.5)
-        alpao_ttc.set_data(self.tt_a0 * ydm.astype('float32'))
+        alpao_ttc.set_data(dm0 + self.tt_a0 * ydm)
         time.sleep(0.5)
         tt_y = self.get_coadd(nav)
-        pf.writeto(conf_dir+'img_tt_y.fits', tt_y, clobber=True)
+        pf.writeto(conf_dir+'img_tt_y.fits', tt_y, overwrite=True)
 
+        alpao_ttc.set_data(dm0) # back to starting point
         time.sleep(0.5)
-        alpao_ttc.set_data(0.0 * ydm.astype('float32')) # back to no tip-tilt
-
+        
         ttx_resp = self.calc_slopes(data=tt_x)
         print(np.round(ttx_resp, 1))
         tty_resp = self.calc_slopes(data=tt_y)
         print(np.round(tty_resp, 1))
 
-        self.ttx_mult = -self.tt_a0 / np.median(ttx_resp[0][self.SH_phot > self.threshold])
-        #self.tty_mult = self.ttx_mult.copy()#self.tt_a0 / np.median(tty_resp[1][self.SH_phot > self.threshold])
+        self.ttx_mult = self.tt_a0 / np.median(ttx_resp[0][self.SH_phot > self.threshold])
         self.tty_mult = self.tt_a0 / np.median(tty_resp[1][self.SH_phot > self.threshold])
 
-        print "!!!!!!!!"
-        print np.median(ttx_resp[0][self.SH_phot > self.threshold])
-        print np.median(tty_resp[1][self.SH_phot > self.threshold])
-        print "!!!!!!!!"
+        #print "!!!!!!!!"
+        #print np.median(ttx_resp[0][self.SH_phot > self.threshold])
+        #print np.median(tty_resp[1][self.SH_phot > self.threshold])
+        #print "!!!!!!!!"
 
         print self.ttx_mult, self.tty_mult
 
@@ -848,9 +852,9 @@ class MyWindow(QtGui.QMainWindow):
             correc = self.ttx_mult * self.ttx_mean * xdm + \
                      self.tty_mult * self.tty_mean * ydm
 
-            time.sleep(0.05)
             alpao_tt.set_data(0.99*(myshape - gain * correc).astype('float32'))
-
+            time.sleep(0.05) # for simulation only!
+            
         # end of loop
         self.tt_abort_flag = False
         print("\ntip-tilt loop opened!\n")
@@ -1016,7 +1020,7 @@ class MyWindow(QtGui.QMainWindow):
         self.RR = np.array(RESP) / a0 # response is now 2D matrix
         self.RTR = np.dot(self.RR, self.RR.T)
 
-        pf.writeto(conf_dir+'zernike_response_matrix.fits', self.RR, clobber=True)
+        pf.writeto(conf_dir+'zernike_response_matrix.fits', self.RR, overwrite=True)
         print("Zernike calibration completed")
 
     # =========================================================
@@ -1038,7 +1042,7 @@ class MyWindow(QtGui.QMainWindow):
         # reference photometry for later weighting
         self.SH_phot_ref = self.SH_phot.copy()
         self.SH_phot_ref /= self.SH_phot_ref.max()
-        pf.writeto(conf_dir+'zo_phot_ref.fits', self.SH_phot_ref, clobber=True)
+        pf.writeto(conf_dir+'zo_phot_ref.fits', self.SH_phot_ref, overwrite=True)
 
         ref_phot         = np.append(self.SH_phot.flatten(), 
                                      self.SH_phot.flatten())
@@ -1075,15 +1079,17 @@ class MyWindow(QtGui.QMainWindow):
         iS1 = np.diag(iS1)
         self.MMinv = Vh.T.dot(iS1).dot(U.T)
 
-        pf.writeto(conf_dir+'zonal_response_matrix.fits', self.MM, clobber=True)
+        pf.writeto(conf_dir+'zonal_response_matrix.fits', self.MM, overwrite=True)
         print("Zonal calibration complete!")
 
     # =========================================================
     def get_coadd(self, nav=20):
-        myim = self.mySHM.get_data(False, True)
+        myim = self.mySHM.get_data(True, True)
         for i in range(nav-1):
-            myim += self.mySHM.get_data(False, True)
-            time.sleep(0.1)
+            myim += self.mySHM.get_data(True, True)
+            sys.stdout.write("\rcoadd %d"  %(i,))
+            sys.stdout.flush()
+            #time.sleep(0.1)
         myim /= nav
         return(myim)
 

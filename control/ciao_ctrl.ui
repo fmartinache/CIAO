@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1352</width>
+    <width>1349</width>
     <height>810</height>
    </rect>
   </property>
@@ -384,7 +384,7 @@
      <rect>
       <x>670</x>
       <y>310</y>
-      <width>232</width>
+      <width>239</width>
       <height>125</height>
      </rect>
     </property>
@@ -428,7 +428,7 @@
           <number>120</number>
          </property>
          <property name="value">
-          <number>4</number>
+          <number>1</number>
          </property>
         </widget>
        </item>
@@ -438,7 +438,7 @@
           <number>120</number>
          </property>
          <property name="value">
-          <number>10</number>
+          <number>1</number>
          </property>
         </widget>
        </item>
@@ -514,7 +514,7 @@
           <double>0.100000000000000</double>
          </property>
          <property name="value">
-          <double>12.500000000000000</double>
+          <double>12.800000000000001</double>
          </property>
         </widget>
        </item>
@@ -530,7 +530,7 @@
           <double>0.100000000000000</double>
          </property>
          <property name="value">
-          <double>12.500000000000000</double>
+          <double>12.800000000000001</double>
          </property>
         </widget>
        </item>
@@ -623,7 +623,7 @@
        <item row="0" column="1">
         <widget class="QDoubleSpinBox" name="dspB_tt_a0">
          <property name="value">
-          <double>0.050000000000000</double>
+          <double>0.100000000000000</double>
          </property>
         </widget>
        </item>
@@ -974,7 +974,7 @@
      <rect>
       <x>960</x>
       <y>550</y>
-      <width>360</width>
+      <width>366</width>
       <height>80</height>
      </rect>
     </property>
@@ -1067,7 +1067,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1352</width>
+     <width>1349</width>
      <height>20</height>
     </rect>
    </property>
