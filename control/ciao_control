@@ -269,11 +269,13 @@ class MyWindow(QtGui.QMainWindow):
         else:
             uic.loadUi(conf_dir + guidef, self)
 
-        self.cam_tints = [0.001, 0.002, 0.005, 
-                          0.010, 0.020, 0.050,
-                          0.100, 0.200, 0.500]
+        self.cam_tints = [0.00001, 0.00002, 0.00005,
+                          0.00010, 0.00020, 0.00050,
+                          0.00100, 0.00200, 0.00500, 
+                          0.01000, 0.02000, 0.05000,
+                          0.10000, 0.20000, 0.50000]
 
-        self.cam_itint = 0
+        self.cam_itint = 6
         self.cam_tint = 0.001
         # ==============================================
         #      prepare the raw image display
