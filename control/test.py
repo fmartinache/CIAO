@@ -8,7 +8,7 @@ import os
 import time
 
 instru = xs.instrument('CIAO')
-instru.start()
+instru.start(delay=0.05)
 
 wfs = WFS()
 wfc = TT_WFC()
@@ -16,8 +16,7 @@ wfc = TT_WFC()
 #os.popen("shmview /tmp/SHcam.im.shm &")
 #os.popen("shmview /tmp/xslp.im.shm &")
 #os.popen("shmview /tmp/yslp.im.shm &")
-
-time.sleep(5)
+#time.sleep(5)
 
 # ------------------
 #   WFS thread
@@ -30,10 +29,9 @@ t.start() # start the WFS monitoring thread
 # ------------------
 
 wfs.calc_SH_data(ref=True) # establish current position as reference
-wfc.calibrate(0.4)
+wfc.calibrate(a0=0.4, reform=False)
 
-time.sleep(0.5)
-
+wfc.cloop()
 
 
 

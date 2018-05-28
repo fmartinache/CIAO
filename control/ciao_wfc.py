@@ -2,6 +2,9 @@
 
 import numpy as np
 from xaosim.shmlib import shm
+from xaosim.zernike import mkzer1
+import astropy.io.fits as pf
+from numpy.linalg import solve
 import sys
 import time
 import pdb
@@ -49,7 +52,8 @@ class DM(object):
     High level information regarding the DM
     ----------------------------------------------------------------------- '''
     def __init__(self,):
-        self.dms = 11
+        self.nba = 97  # number of actuators for the DM 97-15
+        self.dms = 11  # equivalent grid size of the DM 97-15 (11x11 - corners)
         dms = self.dms
         xdm, ydm = np.meshgrid(np.arange(dms)-dms/2, np.arange(dms)-dms/2)
         self.xdm = xdm.T.astype('float32')
@@ -57,6 +61,7 @@ class DM(object):
         self.dmmask   = np.ones((dms, dms), dtype=np.int) # corner mask
         self.dmmask[np.abs(self.xdm) + np.abs(self.ydm) > 7] = 0.0
 
+    # -------------------------------------------------------------------------
     def list_2_map(self, data):
         ''' -------------------------------------------------------------------
         Convert a 1D list of 97 voltages back into a 2D map for an
@@ -73,7 +78,38 @@ class DM(object):
                 res[i,j] = data[i0]
                 i0 += 1
         return(res)
+    
+    # -------------------------------------------------------------------------
+    def zer_mode_bank_2D(self, i0, i1):
+        ''' -------------------------------------------------------------------
+        Produce a bank of Zernike modes for the ALPAO 97-15 DM.
 
+        Parameters:
+        ----------
+        - i0: index of the first zernike mode to be added
+        - i1: index of the last zernike mode to be included
+        ------------------------------------------------------------------- '''
+        dZ = 1 + i1 - i0
+        res = np.zeros((dZ, self.dms, self.dms)).astype('float32')
+        for i in range(i0, i1+1):
+            res[i-i0] = mkzer1(i, self.dms, self.dms/2) * self.dmmask
+        return(res)
+    
+    # -------------------------------------------------------------------------
+    def poke_mode_bank_2D(self):
+        ''' -------------------------------------------------------------------
+        Produce a bank of poke modes for the ALPAO 97-15 DM
+        ------------------------------------------------------------------- '''
+        res = np.zeros((self.nba, self.dms, self.dms)).astype('float32')
+
+        kk = 0
+        for ii in range(self.dms):
+            for jj in range(self.dms):
+                if self.dmmask[jj,ii] > 0.5:
+                    res[kk, jj,ii] = 1.0
+                    kk += 1
+        return res
+    
 # =============================================================================
 # =============================================================================
 
@@ -92,8 +128,36 @@ class WFC(object):
         self.shm_phot = shm('/tmp/phot_inst.im.shm', verbose=False)
 
         self.modes = np.array([self.DM.xdm, self.DM.ydm]) # default modes (ttilt)
+        self.keepgoing = False
         
-    def calibrate(self, a0 = 0.1):
+    # -------------------------------------------------------------------------
+    def get_slopes(self, nav=20, reform=True):
+        ''' -------------------------------------------------------------------
+        test
+        ------------------------------------------------------------------- '''
+        
+        x_cnt = self.shm_xslp.get_counter()
+        x_sig = self.shm_xslp.get_data(check=x_cnt, reform=reform)
+        x_cnt = self.shm_xslp.get_counter()
+        
+        y_cnt = self.shm_yslp.get_counter()
+        y_sig = self.shm_yslp.get_data(check=y_cnt, reform=reform)
+        y_cnt = self.shm_yslp.get_counter()
+        
+        for ii in range(nav-1):
+            x_sig += self.shm_xslp.get_data(check=x_cnt, reform=reform)
+            x_cnt  = self.shm_xslp.get_counter()
+            
+            y_sig += self.shm_yslp.get_data(check=y_cnt, reform=reform)
+            y_cnt  = self.shm_yslp.get_counter()
+            
+        x_sig /= nav
+        y_sig /= nav
+
+        return np.concatenate((x_sig, y_sig))
+
+    # -------------------------------------------------------------------------
+    def calibrate(self, a0 = 0.1, reform=False):
         dm0 = self.alpao_cal.get_data() # DM starting position
         phot = self.shm_phot.get_data()
 
@@ -105,18 +169,28 @@ class WFC(object):
         # go over the modes to be used for this WFC loop
         for ii in range(self.nmodes):
             self.alpao_cal.set_data((dm0 + self.modes[ii] * a0))
+            time.sleep(0.5)
             sys.stdout.write("\rmode %d" % (ii+1,))
             sys.stdout.flush()
-            temp = get_coadd(self.shm_xslp, self.shm_yslp,
-                             nav=self.nav, reform=False)
-            pdb.set_trace()
-            
+
+            RESP.append(self.get_slopes(self.nav, reform=reform))
+
         self.alpao_cal.set_data(dm0) # back to DM starting position
+        self.RR = np.array(RESP) / a0
+        self.RTR = self.RR.dot(self.RR.T)
+        return self.RR #pf.writeto("cal.fits", np.array(RESP), overwrite=True)
         
+        
+    # -------------------------------------------------------------------------
+    def cloop(self, gain=0.1):
+        self.gain = gain
 
-    def cloop(self,):
-        pass
-
+        self.keepgoing = True
+        while self.keepgoing:
+            sig = self.get_slopes(1, reform=False)
+            coeffs = solve(self.RTR, np.dot(self.RR, sig))
+            #sys.stdout.write("\rcoeffs: %+.3f %+.3f" % (tuple(coeffs)))
+            #sys.stdout.flush()
 # =============================================================================
 # =============================================================================
 
@@ -131,8 +205,8 @@ class TT_WFC(WFC):
         nav = 5
         super(TT_WFC, self).__init__(cor, cal, nav)
 
-    def calibrate(self, a0 = 0.1):
-        super(TT_WFC, self).calibrate(a0=a0)
+    def calibrate(self, a0 = 0.1, reform=False):
+        super(TT_WFC, self).calibrate(a0=a0, reform=reform)
         
         '''
         dm0 = self.alpao_cal.get_data()
@@ -154,8 +228,8 @@ class TT_WFC(WFC):
         self.tty_mult = a0 / np.mean(self.tt_y[phot > 1.0])
         '''
         
-    def cloop(self,):
-        pass
+    def cloop(self, gain=0.1):
+        super(TT_WFC, self).cloop(gain=gain)
 
 # =============================================================================
 # =============================================================================
