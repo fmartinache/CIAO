@@ -3,8 +3,9 @@
 import sys
 import numpy as np
 from xaosim.shmlib import shm
+import datetime
 
-def centroid_position(img):
+def centroid_position_0(img):
     ''' --------------------------------------------------------------
     Returns the (x,y) position of the centroid of the array *img*
     -------------------------------------------------------------- '''
@@ -18,16 +19,25 @@ def centroid_position(img):
     denomy = np.sum(mprofy)
 
     if denomx > 1:
-        xc = np.sum(mprofx * xxc) / np.sum(mprofx)
+        xc = np.sum(mprofx * xxc) / denomx
     else:
         xc = 0.0
     if denomy > 1:
-        yc = np.sum(mprofy * yyc) / np.sum(mprofy)
+        yc = np.sum(mprofy * yyc) / denomy
     else:
         yc = 0.0
     return((yc, xc))
 
-class monitor():
+def centroid_position(img):
+    ''' --------------------------------------------------------------
+    Returns the (x,y) position of the centroid of the array *img*
+    -------------------------------------------------------------- '''
+    return np.unravel_index(np.argmax(img, axis=None), img.shape)
+
+# =============================================================================
+# =============================================================================
+
+class WFS():
     # =========================================================
     def __init__(self, shmf="/tmp/SHcam.im.shm"):
 
@@ -41,12 +51,17 @@ class monitor():
         # -----------------------------
         # shared memory data structures
         # -----------------------------
-        self.im_shm = shm(shmf)                  # shared mem. image
-        self.isz = self.im_shm.mtdata['size'][0] # should be 128
-
+        self.shm_im = shm(shmf)                  # shared mem. image
+        self.isz = self.shm_im.mtdata['size'][0] # should be 128
+        self.im_cnt = self.shm_im.get_counter()  # image counter
         self.update_grid()
         self.define_SH_data()
         
+        # ------------------
+        # control structures
+        # ------------------
+        self.keepgoing = False
+
     # =========================================================
     def update_grid(self,):
         ''' -------------------------------------------------------
@@ -77,7 +92,6 @@ class monitor():
         # additional arrays for convenience
         self.SH_xtmp = np.zeros((ncy, ncx))
         self.SH_ytmp = np.zeros((ncy, ncx))
-        self.calc_SH_data(ref=True)
 
         self.shm_phot_gain = shm('/tmp/phot_gain.im.shm', data=self.SH_phot, 
                                  verbose=False) # experiment!
@@ -87,18 +101,6 @@ class monitor():
 
         self.shm_xslp = shm('/tmp/xslp.im.shm', data=self.SH_xslp, verbose=False)
         self.shm_yslp = shm('/tmp/yslp.im.shm', data=self.SH_yslp, verbose=False)
-        
-    # =========================================================
-    def calc_SH_data(self, data=None, ref=True):
-        xx, yy   = self.SH_xx , self.SH_yy        
-        ncx, ncy = xx.size - 1, yy.size - 1
-
-        if data is None:
-            self.live_img = self.im_shm.get_data(True, True)
-        else:
-            self.live_img = data
-            
-        #self.live_img[self.live_img <= self.vmin] = self.vmin
 
         for j in xrange(ncy):
             y0, y1 = int(np.round(yy[j])), int(np.round(yy[j+1]))
@@ -106,8 +108,29 @@ class monitor():
             for i in xrange(ncx):
                 x0, x1 = int(np.round(xx[i])), int(np.round(xx[i+1]))
 
-                self.SH_xref[j,i] = 0.5 * (x1 - x0) #self.SH_dx
-                self.SH_yref[j,i] = 0.5 * (y1 - y0) #self.SH_dy
+                self.SH_xref[j,i] = 0.5 * (x1 - x0)
+                self.SH_yref[j,i] = 0.5 * (y1 - y0)
+
+        
+    # =========================================================
+    def calc_SH_data(self, data=None, ref=True):
+        xx, yy   = self.SH_xx , self.SH_yy        
+        ncx, ncy = xx.size - 1, yy.size - 1
+
+        if data is None:
+            self.live_img = self.shm_im.get_data(check=self.im_cnt, reform=True)
+        else:
+            self.live_img = data
+
+        self.im_cnt = self.shm_im.get_counter()  # image counter
+
+        #self.live_img[self.live_img <= self.vmin] = self.vmin
+
+        for j in xrange(ncy):
+            y0, y1 = int(np.round(yy[j])), int(np.round(yy[j+1]))
+
+            for i in xrange(ncx):
+                x0, x1 = int(np.round(xx[i])), int(np.round(xx[i+1]))
 
                 sub_arr           = self.live_img[y0:y1,x0:x1]
                 self.SH_phot[j,i] = sub_arr.max() #- self.threshold
@@ -131,6 +154,10 @@ class monitor():
         self.SH_xslp[self.SH_phot <= self.threshold] = 0.0
         self.SH_yslp[self.SH_phot <= self.threshold] = 0.0
 
+        self.shm_xslp.set_data(self.SH_xslp)
+        self.shm_yslp.set_data(self.SH_yslp)
+        self.shm_phot_inst.set_data(self.SH_phot)
+        
         # here is information about the tip-tilt in pixels!
         # weighted mean version!
         #self.ttx_mean = np.sum(self.SH_xslp * self.SH_phot) / np.sum(self.SH_phot)
@@ -141,15 +168,23 @@ class monitor():
         self.tty_mean = np.median(self.SH_yslp[self.SH_phot > self.threshold])
 
     # =========================================================
+    def loop(self,):
+        self.keepgoing = True
+        while self.keepgoing:
+            self.calc_SH_data(ref=False)
+        print("WFS monitoring is now off")
+
+    # =========================================================
     def start(self,):
         print("start %s" % ("YEAH!", ))
         print(self.SH_xx)
         print(self.SH_yy)
-
+        self.calc_SH_data(ref=True)
         
 # ==========================================================
 # ==========================================================
 if __name__ == "__main__":
-    mon = monitor()
+    mon = WFS()
     mon.start()
+    
     
