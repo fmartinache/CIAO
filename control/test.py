@@ -10,8 +10,8 @@ import time
 instru = xs.instrument('CIAO')
 instru.start(delay=0.05)
 
-wfs = WFS()
-wfc = TT_WFC()
+wfs = WFS(shmf="/tmp/SHcam.im.shm")
+wfc = ZER_WFC()
 
 os.popen("shmview /tmp/SHcam.im.shm &")
 #os.popen("shmview /tmp/xslp.im.shm &")
@@ -30,11 +30,11 @@ t = threading.Thread(target=wfs.loop, args=())
 t.start() # start the WFS monitoring thread
 
 # ------------------
-#  TT calibration
+#  calibration
 # ------------------
 
 wfs.calc_SH_data(ref=True) # establish current position as reference
-wfc.calibrate(a0=0.4, reform=False)
+wfc.calibrate(a0=0.2, reform=False)
 
 # ------------------
 #   WFC thread
@@ -45,24 +45,8 @@ wfc.gain = 0.001
 #wfc.cloop()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-# ------------------
-# the bar is closing
-# ------------------
 '''
 
-wfs.keepgoing = False
-instru.close()
+close()
 
 '''

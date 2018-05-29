@@ -5,6 +5,8 @@ from xaosim.shmlib import shm
 from xaosim.zernike import mkzer1
 import astropy.io.fits as pf
 from numpy.linalg import solve
+from numpy.linalg import pinv
+
 import sys
 import time
 import pdb
@@ -130,10 +132,11 @@ class WFC(object):
         self.shm_yslp = shm('/tmp/yslp.im.shm', verbose=False)
         self.shm_phot = shm('/tmp/phot_inst.im.shm', verbose=False)
         
-        self.modes = np.array([self.DM.xdm, self.DM.ydm]) # (ttilt)
+        self.modes     = np.array([self.DM.xdm, self.DM.ydm]) # (ttilt)
         self.keepgoing = False
-        self.gain = 0.001 # default gain
-        self.tsleep = 1e-6 # for tests
+        self.gain      = 0.001 # default gain
+        self.tsleep    = 1e-6 # for tests
+        self.verbose   = True
         
     # -------------------------------------------------------------------------
     def get_slopes(self, nav=20, reform=True):
@@ -162,13 +165,17 @@ class WFC(object):
         return np.concatenate((x_sig, y_sig))
 
     # -------------------------------------------------------------------------
+    def reset(self,):
+        self.alpao_cor.set_data(0.0 * self.alpao_cor.get_data())
+        
+    # -------------------------------------------------------------------------
     def calibrate(self, a0 = 0.1, reform=False):
         ''' -------------------------------------------------------------------
         Generic calibration procedure for set of modes attached to the object
         ------------------------------------------------------------------- '''
         dm0 = self.alpao_cal.get_data() # DM starting position
         phot = self.shm_phot.get_data()
-
+        
         RESP = [] # empty response matrix holder
         
         self.nmodes = self.modes.shape[0]
@@ -185,8 +192,8 @@ class WFC(object):
 
         self.alpao_cal.set_data(dm0) # back to DM starting position
         self.RR = np.array(RESP) / a0
+        self.RR[np.abs(self.RR) < 1e-2] = 0.0 # matrix clean up
         self.RTR = self.RR.dot(self.RR.T)
-        return self.RR #pf.writeto("cal.fits", np.array(RESP), overwrite=True)        
         
     # -------------------------------------------------------------------------
     def cloop(self,):
@@ -198,17 +205,19 @@ class WFC(object):
         while self.keepgoing:
             sig = self.get_slopes(1, reform=False)
             dm0 = self.alpao_cor.get_data()
-            ww  = solve(self.RTR, np.dot(self.RR, sig)) + 1e-9
+            #ww  = solve(self.RTR, np.dot(self.RR, sig)) + 1e-9
+            ww = self.RRinv.dot(sig) + 1e-9
             tmp = np.average(self.modes, weights=ww, axis=0)
             cor = tmp * self.nmodes * ww.sum()
             dm1 = 0.999 * (dm0 - self.gain * cor.astype('float32'))
             self.alpao_cor.set_data(dm1)
 
             time.sleep(self.tsleep)
-            
-            sys.stdout.write("\rcoeffs: %+.3f %+.3f" % (tuple(ww)))
-            sys.stdout.flush()
 
+            if self.verbose:
+                sys.stdout.write("\rcoeffs: "+ "%+.3f " * self.nmodes % (tuple(ww)))
+                sys.stdout.flush()
+        print("\nWFC loop opened.")
 # =============================================================================
 # =============================================================================
 
@@ -226,10 +235,85 @@ class TT_WFC(WFC):
         
     def calibrate(self, a0 = 0.1, reform=False):
         super(TT_WFC, self).calibrate(a0=a0, reform=reform)
-        
+        self.RRinv = pinv(self.RR.T, rcond=0.1)
         
     def cloop(self,):
         super(TT_WFC, self).cloop()
+
+    def reset(self,):
+        super(TT_WFC, self).reset()
+        
+# =============================================================================
+# =============================================================================
+
+class ZER_WFC(WFC):
+    ''' -----------------------------------------------------------------------
+    Zernike based wavefront control data structure.
+    ----------------------------------------------------------------------- '''
+
+    def __init__(self, iz0=4, iz1=11):
+        ''' -------------------------------------------------------------------
+        Class constructor.
+
+        Specifies calibration and correction channels as well as the basis
+        of modes to use to control the wavefront.
+        
+        Parameters:
+        ----------
+        - iz0: first index of the Zernike modes to control (default = 4)
+        - iz1: last  index of the Zernike modes to control (default = 11)
+        ------------------------------------------------------------------- '''
+        
+        cor = shm('/tmp/dmdisp3.im.shm', verbose=False) # correction
+        cal = shm('/tmp/dmdisp7.im.shm', verbose=False) # calibration
+        nav = 5
+        super(ZER_WFC, self).__init__(cor, cal, nav)
+        self.modes = self.DM.zer_mode_bank_2D(iz0, iz1)
+        
+    def calibrate(self, a0 = 0.1, reform=False):
+        super(ZER_WFC, self).calibrate(a0=a0, reform=reform)
+        self.RRinv = pinv(self.RR.T, rcond=0.1)
+        
+    def cloop(self,):
+        super(ZER_WFC, self).cloop()
+
+    def reset(self,):
+        super(ZER_WFC, self).reset()
+
+# =============================================================================
+# =============================================================================
+
+class ZON_WFC(WFC):
+    ''' -----------------------------------------------------------------------
+    Zonal based wavefront control data structure.
+    ----------------------------------------------------------------------- '''
+
+    def __init__(self,):
+        ''' -------------------------------------------------------------------
+        Class constructor.
+
+        Specifies calibration and correction channels as well as the basis
+        of modes to use to control the wavefront.
+        
+        ------------------------------------------------------------------- '''
+        
+        cor = shm('/tmp/dmdisp3.im.shm', verbose=False) # correction
+        cal = shm('/tmp/dmdisp7.im.shm', verbose=False) # calibration
+        nav = 5
+        super(ZON_WFC, self).__init__(cor, cal, nav)
+        self.modes = self.DM.poke_mode_bank_2D()
+        
+    def calibrate(self, a0 = 0.1, reform=False):
+
+        super(ZON_WFC, self).calibrate(a0=a0, reform=reform)
+        # filtering for the pseudo-inverse matrix
+        self.RRinv = pinv(self.RR.T, rcond=0.1)
+        
+    def cloop(self,):
+        super(ZON_WFC, self).cloop()
+
+    def reset(self,):
+        super(ZON_WFC, self).reset()
 
 # =============================================================================
 # =============================================================================

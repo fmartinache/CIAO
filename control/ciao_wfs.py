@@ -137,7 +137,7 @@ class WFS():
 
                 sub_arr[sub_arr < self.threshold] = self.threshold
                 if self.SH_phot[j,i] > self.threshold:
-                    (yc, xc) = centroid_position(sub_arr)
+                    (yc, xc) = centroid_position_0(sub_arr)
                 else:
                     (yc, xc) = (self.SH_xref[j,i], self.SH_yref[j,i])
 
