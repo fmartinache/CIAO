@@ -7,21 +7,21 @@ import threading
 import os
 import time
 
-instru = xs.instrument('CIAO')
-instru.start(delay=0.05)
+#instru = xs.instrument('CIAO')
+#instru.start(delay=0.05)
 
-wfs = WFS(shmf="/tmp/SHcam.im.shm")
-wfc = ZER_WFC()
+wfs = WFS(shmf="/tmp/ixon.im.shm")
+wfc = ZER_WFC(4, 15)
 
-os.popen("shmview /tmp/SHcam.im.shm &")
+#os.popen("shmview /tmp/ixon.im.shm &")
 #os.popen("shmview /tmp/xslp.im.shm &")
 #os.popen("shmview /tmp/yslp.im.shm &")
-#time.sleep(5)
+time.sleep(5)
 
 def close():
     wfs.keepgoing = False
     wfc.keepgoing = False
-    instru.close()
+    #instru.close()
     
 # ------------------
 #   WFS thread
@@ -34,7 +34,8 @@ t.start() # start the WFS monitoring thread
 # ------------------
 
 wfs.calc_SH_data(ref=True) # establish current position as reference
-wfc.calibrate(a0=0.2, reform=False)
+wfc.nav = 50
+wfc.calibrate(a0=0.02, reform=False)
 
 # ------------------
 #   WFC thread

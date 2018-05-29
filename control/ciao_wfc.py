@@ -136,7 +136,7 @@ class WFC(object):
         self.keepgoing = False
         self.gain      = 0.001 # default gain
         self.tsleep    = 1e-6 # for tests
-        self.verbose   = True
+        self.verbose   = False
         
     # -------------------------------------------------------------------------
     def get_slopes(self, nav=20, reform=True):
@@ -232,7 +232,8 @@ class TT_WFC(WFC):
         nav = 5
         super(TT_WFC, self).__init__(cor, cal, nav)
         self.modes = np.array([self.DM.xdm, self.DM.ydm]) # (ttilt)
-        
+        self.verbose = True
+
     def calibrate(self, a0 = 0.1, reform=False):
         super(TT_WFC, self).calibrate(a0=a0, reform=reform)
         self.RRinv = pinv(self.RR.T, rcond=0.1)
@@ -269,6 +270,7 @@ class ZER_WFC(WFC):
         nav = 5
         super(ZER_WFC, self).__init__(cor, cal, nav)
         self.modes = self.DM.zer_mode_bank_2D(iz0, iz1)
+        self.verbose = True
         
     def calibrate(self, a0 = 0.1, reform=False):
         super(ZER_WFC, self).calibrate(a0=a0, reform=reform)
@@ -302,7 +304,8 @@ class ZON_WFC(WFC):
         nav = 5
         super(ZON_WFC, self).__init__(cor, cal, nav)
         self.modes = self.DM.poke_mode_bank_2D()
-        
+        self.verbose = False
+
     def calibrate(self, a0 = 0.1, reform=False):
 
         super(ZON_WFC, self).calibrate(a0=a0, reform=reform)

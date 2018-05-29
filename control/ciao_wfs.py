@@ -44,9 +44,9 @@ class WFS():
         # -------------------------
         # to be provided externally
         # -------------------------
-        self.SH_x0, self.SH_y0 = 0, 0   # properties of the grid
-        self.SH_dx, self.SH_dy = 13, 13 # properties of the grid
-        self.threshold = 10.0
+        self.SH_x0, self.SH_y0 = 6, 0   # properties of the grid
+        self.SH_dx, self.SH_dy = 12.8, 12.8 # properties of the grid
+        self.threshold = 110.0
         
         # -----------------------------
         # shared memory data structures
@@ -68,13 +68,13 @@ class WFS():
         Updates the SH cells positions for new SH grid parameters
         ------------------------------------------------------- '''
         nx = int((self.isz - self.SH_x0) / self.SH_dx + 2)
-        xx = self.SH_x0 + np.arange(nx-1) * self.SH_dx
+        xx = np.round(self.SH_x0+np.arange(nx-1)*self.SH_dx).astype(int)
         if (self.isz - xx[-1] > self.SH_dx/2+2):
             xx = np.append(xx, self.isz)
         self.SH_xx = xx
         
         ny = int((self.isz - self.SH_y0) / self.SH_dy + 2)
-        yy = self.SH_y0 + np.arange(ny-1) * self.SH_dy
+        yy = np.round(self.SH_y0+np.arange(ny-1)*self.SH_dy).astype(int)
         if (self.isz - yy[-1] > self.SH_dy/2+2):
             yy = np.append(yy, self.isz)
         self.SH_yy = yy
