@@ -8,6 +8,9 @@ from numpy.linalg import solve
 import sys
 import time
 import pdb
+import matplotlib.pyplot as plt
+plt.ion()
+plt.show()
 
 # =============================================================================
 # =============================================================================
@@ -126,9 +129,11 @@ class WFC(object):
         self.shm_xslp = shm('/tmp/xslp.im.shm', verbose=False)
         self.shm_yslp = shm('/tmp/yslp.im.shm', verbose=False)
         self.shm_phot = shm('/tmp/phot_inst.im.shm', verbose=False)
-
-        self.modes = np.array([self.DM.xdm, self.DM.ydm]) # default modes (ttilt)
+        
+        self.modes = np.array([self.DM.xdm, self.DM.ydm]) # (ttilt)
         self.keepgoing = False
+        self.gain = 0.001 # default gain
+        self.tsleep = 1e-6 # for tests
         
     # -------------------------------------------------------------------------
     def get_slopes(self, nav=20, reform=True):
@@ -158,6 +163,9 @@ class WFC(object):
 
     # -------------------------------------------------------------------------
     def calibrate(self, a0 = 0.1, reform=False):
+        ''' -------------------------------------------------------------------
+        Generic calibration procedure for set of modes attached to the object
+        ------------------------------------------------------------------- '''
         dm0 = self.alpao_cal.get_data() # DM starting position
         phot = self.shm_phot.get_data()
 
@@ -169,7 +177,7 @@ class WFC(object):
         # go over the modes to be used for this WFC loop
         for ii in range(self.nmodes):
             self.alpao_cal.set_data((dm0 + self.modes[ii] * a0))
-            time.sleep(0.5)
+            time.sleep(self.tsleep) # for simulation only!
             sys.stdout.write("\rmode %d" % (ii+1,))
             sys.stdout.flush()
 
@@ -178,19 +186,29 @@ class WFC(object):
         self.alpao_cal.set_data(dm0) # back to DM starting position
         self.RR = np.array(RESP) / a0
         self.RTR = self.RR.dot(self.RR.T)
-        return self.RR #pf.writeto("cal.fits", np.array(RESP), overwrite=True)
-        
+        return self.RR #pf.writeto("cal.fits", np.array(RESP), overwrite=True)        
         
     # -------------------------------------------------------------------------
-    def cloop(self, gain=0.1):
-        self.gain = gain
+    def cloop(self,):
+        ''' -------------------------------------------------------------------
+        Generic closed-loop procedure for the modes attached to the object.
+        ------------------------------------------------------------------- '''
 
         self.keepgoing = True
         while self.keepgoing:
             sig = self.get_slopes(1, reform=False)
-            coeffs = solve(self.RTR, np.dot(self.RR, sig))
-            #sys.stdout.write("\rcoeffs: %+.3f %+.3f" % (tuple(coeffs)))
-            #sys.stdout.flush()
+            dm0 = self.alpao_cor.get_data()
+            ww  = solve(self.RTR, np.dot(self.RR, sig)) + 1e-9
+            tmp = np.average(self.modes, weights=ww, axis=0)
+            cor = tmp * self.nmodes * ww.sum()
+            dm1 = 0.999 * (dm0 - self.gain * cor.astype('float32'))
+            self.alpao_cor.set_data(dm1)
+
+            time.sleep(self.tsleep)
+            
+            sys.stdout.write("\rcoeffs: %+.3f %+.3f" % (tuple(ww)))
+            sys.stdout.flush()
+
 # =============================================================================
 # =============================================================================
 
@@ -204,32 +222,14 @@ class TT_WFC(WFC):
         cal = shm('/tmp/dmdisp6.im.shm', verbose=False) # calibration
         nav = 5
         super(TT_WFC, self).__init__(cor, cal, nav)
-
+        self.modes = np.array([self.DM.xdm, self.DM.ydm]) # (ttilt)
+        
     def calibrate(self, a0 = 0.1, reform=False):
         super(TT_WFC, self).calibrate(a0=a0, reform=reform)
         
-        '''
-        dm0 = self.alpao_cal.get_data()
-        phot = self.shm_phot.get_data()
         
-        self.alpao_cal.set_data(dm0 + self.DM.xdm * a0)
-        print("moving X")
-        self.tt_y = get_coadd(self.shm_yslp, nav=self.nav, reform=True)
-        
-        self.alpao_cal.set_data(dm0 + self.DM.ydm * a0)
-        print("moving Y")
-        self.tt_x = get_coadd(self.shm_xslp, nav=self.nav, reform=True)
-        
-        self.alpao_cal.set_data(dm0)
-        print("Back to base")
-
-        pdb.set_trace()
-        self.ttx_mult = a0 / np.mean(self.tt_x[phot > 1.0])
-        self.tty_mult = a0 / np.mean(self.tt_y[phot > 1.0])
-        '''
-        
-    def cloop(self, gain=0.1):
-        super(TT_WFC, self).cloop(gain=gain)
+    def cloop(self,):
+        super(TT_WFC, self).cloop()
 
 # =============================================================================
 # =============================================================================
