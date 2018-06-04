@@ -3,9 +3,9 @@
 import numpy as np
 from xaosim.shmlib import shm
 from xaosim.zernike import mkzer1
-import astropy.io.fits as pf
 from numpy.linalg import solve
 from numpy.linalg import pinv
+import astropy.io.fits as pf
 
 import sys
 import time
@@ -73,7 +73,7 @@ class DM(object):
 
         i0 = 0
         for k in xrange(dms*dms):
-            if (dmmask.flatten()[k] > 0):
+            if (self.dmmask.flatten()[k] > 0):
                 i = k / dms
                 j = k % dms
                 res[i,j] = data[i0]
@@ -93,7 +93,7 @@ class DM(object):
         dZ = 1 + i1 - i0
         res = np.zeros((dZ, self.dms, self.dms)).astype('float32')
         for i in range(i0, i1+1):
-            res[i-i0] = mkzer1(i, self.dms, self.dms/2 +1) * self.dmmask
+            res[i-i0] = mkzer1(i, self.dms, self.dms/2 +2) * self.dmmask
         return(res)
     
     # -------------------------------------------------------------------------
@@ -123,7 +123,8 @@ class WFC(object):
         self.alpao_cor = shm_cor # correction
         self.alpao_cal = shm_cal # calibration
         self.nav = nav           # number of calibration coadds
-
+        self.a0 = 0.1            # calibration amplitude
+        
         self.shm_comb = shm('/tmp/comb.im.shm', verbose=False)
         
         self.shm_xslp = shm('/tmp/xslp.im.shm', verbose=False)
@@ -137,6 +138,7 @@ class WFC(object):
         self.verbose   = False
         self.abort     = False
         self.calib_on  = False
+        self.loop_on   = False
         
     # -------------------------------------------------------------------------
     def get_slopes_comb(self, nav=20, reform=True):
@@ -195,6 +197,9 @@ class WFC(object):
         Generic calibration procedure for set of modes attached to the object
         ------------------------------------------------------------------- '''
         self.calib_on = True
+        self.abort = False
+        self.a0 = a0
+        
         dm0 = self.alpao_cal.get_data() # DM starting position
         #phot = self.shm_phot.get_data()
         phot = self.shm_comb.get_data()[2]
@@ -208,6 +213,7 @@ class WFC(object):
         for ii in range(self.nmodes):
             if self.abort:
                 self.abort = False
+                self.calib_on = False
                 return
             self.alpao_cal.set_data((dm0 + self.modes[ii] * a0))
             time.sleep(self.tsleep) # for simulation only!
@@ -217,32 +223,49 @@ class WFC(object):
             RESP.append(self.get_slopes_comb(self.nav, reform=reform))
 
         self.alpao_cal.set_data(dm0) # back to DM starting position
-        self.RR = np.array(RESP) / a0
-        self.RR[np.abs(self.RR) < 1e-2] = 0.0 # matrix clean up
+        self.RR = np.array(RESP)# / a0
+        #self.RR[np.abs(self.RR) < 1e-2] = 0.0 # matrix clean up
         self.RTR = self.RR.dot(self.RR.T)
         self.calib_on = False
+
     # -------------------------------------------------------------------------
+    def reload_cal(self, fname=None):
+        ''' -------------------------------------------------------------------
+        Tries to reload a previously saved calibration?
+        ------------------------------------------------------------------- '''
+
+        try:
+            self.RR = pf.getdata(fname)
+        except:
+            print("Calibration matrix %s not available" % (fname))
+            return
+        self.RRinv = pinv(self.RR.T, rcond=0.1)
+        
+        # -------------------------------------------------------------------------
     def cloop(self,):
         ''' -------------------------------------------------------------------
         Generic closed-loop procedure for the modes attached to the object.
         ------------------------------------------------------------------- '''
 
         self.keepgoing = True
+        self.loop_on = True
         while self.keepgoing:
             sig = self.get_slopes_comb(1, reform=False)
             dm0 = self.alpao_cor.get_data()
             #ww  = solve(self.RTR, np.dot(self.RR, sig)) + 1e-9
-            ww = self.RRinv.dot(sig) + 1e-9
-            tmp = np.average(self.modes, weights=ww, axis=0)
-            cor = tmp * self.nmodes * ww.sum()
+            ee = self.a0 * self.RRinv.dot(sig)# + 1e-15
+            cor = np.sum(self.modes * ee)
+            #cor = np.average(self.modes, weights=ee, axis=0) * self.nmodes * ww.sum()
             dm1 = 0.999 * (dm0 - self.gain * cor.astype('float32'))
             self.alpao_cor.set_data(dm1)
 
             time.sleep(self.tsleep)
 
             if self.verbose:
-                sys.stdout.write("\rcoeffs: "+ "%+.3f " * self.nmodes % (tuple(ww)))
+                sys.stdout.write(
+                    "\rcoeffs: "+ "%+.3f " * self.nmodes % (tuple(ww)))
                 sys.stdout.flush()
+        self.loop_on = False
         print("\nWFC loop opened.")
 # =============================================================================
 # =============================================================================
@@ -269,7 +292,10 @@ class TT_WFC(WFC):
 
     def reset(self,):
         super(TT_WFC, self).reset()
-        
+
+    def reload_cal(self, fname=None):
+        super(TT_WFC, self).reload_cal(fname=fname)
+
 # =============================================================================
 # =============================================================================
 
@@ -308,6 +334,9 @@ class ZER_WFC(WFC):
     def reset(self,):
         super(ZER_WFC, self).reset()
 
+    def reload_cal(self, fname=None):
+        super(ZER_WFC, self).reload_cal(fname=fname)
+
 # =============================================================================
 # =============================================================================
 
@@ -343,6 +372,9 @@ class ZON_WFC(WFC):
 
     def reset(self,):
         super(ZON_WFC, self).reset()
+        
+    def reload_cal(self, fname=None):
+        super(ZON_WFC, self).reload_cal(fname=fname)
 
 # =============================================================================
 # =============================================================================

@@ -158,7 +158,7 @@ class MyWindow(QtGui.QMainWindow):
         self.gView_SH_cam.hideAxis('bottom')
 
         self.imv_raw = pg.ImageItem()
-        self.overlay  = pg.GraphItem()
+        self.overlay = pg.GraphItem()
         
         self.gView_SH_cam.addItem(self.imv_raw)
         self.gView_SH_cam.addItem(self.overlay)
@@ -171,8 +171,10 @@ class MyWindow(QtGui.QMainWindow):
         self.gView_SH_info.addItem(self.imv_WFS)
 
         # -- the tip-tilt log plot --
-        self.logplotx = self.gView_TT_log.plot([0,200],[0,0], pen=(0,255,0), name="ttx")
-        self.logploty = self.gView_TT_log.plot([0,200],[0,0], pen=(0,0,255), name="tty")
+        self.logplotx = self.gView_TT_log.plot([0,200],[0,0],
+                                               pen=(0,255,0), name="ttx")
+        self.logploty = self.gView_TT_log.plot([0,200],[0,0],
+                                               pen=(0,0,255), name="tty")
         
         # ==============================================
         #             GUI widget actions 
@@ -182,15 +184,18 @@ class MyWindow(QtGui.QMainWindow):
 
         self.chB_min.stateChanged[int].connect(self.update_vmin)
         self.chB_min.stateChanged[int].connect(self.update_vmax)
-
+        self.chB_min.setChecked(True)
+        self.update_vmin()
+        
         self.chB_nonlinear.stateChanged[int].connect(self.update_nonlinear)
         
         self.cmB_cbar.addItems(['gray',    'hot',   'jet',
                                 'viridis', 'magma', 'inferno',
                                 'plasma'])
         self.cmB_cbar.activated[str].connect(self.update_cbar)
-        self.cmB_cbar.setCurrentIndex(4)
-
+        self.cmB_cbar.setCurrentIndex(3)
+        self.update_cbar()
+        
         self.chB_show_grid.stateChanged[int].connect(self.redraw_SH_grid)
         self.spB_grid_x0.valueChanged[int].connect(self.redraw_SH_grid)
         self.spB_grid_y0.valueChanged[int].connect(self.redraw_SH_grid)
@@ -236,9 +241,14 @@ class MyWindow(QtGui.QMainWindow):
         self.log("CIAO ready to rock!")
 
         # --- wavefront control callbacks ---
-        self.TT_WFC = TT_WFC()                # tip-tilt wavefront control
-        self.ZER_WFC = ZER_WFC(iz0=4, iz1=11) # Zernike wavefront control 
-        
+        self.TT_WFC = TT_WFC()               # tip-tilt wavefront control
+        self.ZER_WFC = ZER_WFC(iz0=2, iz1=5) # Zernike wavefront control
+        self.ZON_WFC = ZON_WFC()             # Zonal wavefront contrl
+
+        self.TT_WFC.reload_cal(fname=conf_dir+"TT_CAL.fits")
+        self.ZON_WFC.reload_cal(fname=conf_dir+"ZON_CAL.fits")
+        self.ZER_WFC.reload_cal(fname=conf_dir+"ZER_CAL.fits")
+
         self.pB_tt_abort.clicked.connect(self.tt_abort)
         self.pB_tt_recal.clicked.connect(self.tt_calib)
         self.pB_tt_cloop.clicked.connect(self.tt_cloop)
@@ -252,6 +262,12 @@ class MyWindow(QtGui.QMainWindow):
         self.dspB_zer_gain.valueChanged[float].connect(self.zer_update_gain)
         self.dspB_zer_nz.valueChanged[int].connect(self.zer_update_nz)
         
+        self.pB_zo_abort.clicked.connect(self.zo_abort)
+        self.pB_zo_recal.clicked.connect(self.zo_calib)
+        self.pB_zo_cloop.clicked.connect(self.zo_cloop)
+        self.pB_zo_reset.clicked.connect(self.ZON_WFC.reset)
+        self.dspB_zo_gain.valueChanged[float].connect(self.zo_update_gain)
+
     # =========================================================
     def wfs_regrid(self,):
         ''' ----------------------------------------------------------
@@ -304,11 +320,35 @@ class MyWindow(QtGui.QMainWindow):
     # =========================================================
     def closeEvent(self, event):
         ''' ----------------------------------------------------------
-        GUI call: when corner of window is clicked.
+        GUI call: activated when corner of window is clicked.
+        Attempts to save the calibration matrices!
         ---------------------------------------------------------- '''        
-
-        self.wfs.keepgoing = False
-        self.TT_WFC.keepgoing = False
+        try:
+            pf.writeto(conf_dir+"ZER_CAL.fits",
+                       self.ZER_WFC.RR,
+                       overwrite=True)
+        except:
+            print("Zernike calibration matrices not saved")
+            
+        try:
+            pf.writeto(conf_dir+"TT_CAL.fits",
+                       self.TT_WFC.RR,
+                       overwrite=True)
+        except:
+            print("Tip-tilt calibration matrices not saved")
+            
+        try:
+            pf.writeto(conf_dir+"ZON_CAL.fits",
+                       self.ZON_WFC.RR,
+                       overwrite=True)
+        except:
+            print("Zonal calibration matrices not saved")
+            
+        self.wfs.keepgoing     = False
+        self.TT_WFC.keepgoing  = False
+        self.ZER_WFC.keeggoing = False
+        self.ZON_WFC.keeggoing = False
+        
         time.sleep(1) # pause to shutdown external processes
         sys.exit()
         
@@ -374,11 +414,16 @@ class MyWindow(QtGui.QMainWindow):
         self.SH_yy = yy
         
         if self.chB_show_grid.isChecked():
-            self.overlay.setData(pos=pos, adj=adj, pen=(255,0,0,255),
-                                 symbolPen=None, symbolBrush=None)
+            print(adj)
+            print(pos)
+            self.overlay.setData(pos=pos, adj=adj,
+                                 pen=(255,0,0,255), size=5,
+                                 #symbolPen=None, symbolBrush=None,
+                                 pxMode=False)
         else:
-            self.overlay.setData(pos=pos, adj=adj, pen=None,
-                                 symbolPen=None, symbolBrush=None)
+            self.overlay.setData(pos=pos, adj=adj, pen=None, size=1,
+                                 #symbolPen=None, symbolBrush=None,
+                                 pxMode=False)
     # =========================================================
     def refresh_all(self):
         ''' ----------------------------------------------------------
@@ -400,6 +445,29 @@ class MyWindow(QtGui.QMainWindow):
         self.refresh_wfs_display()
         self.refresh_stats()
 
+        # -------
+        
+        if self.TT_WFC.calib_on or self.TT_WFC.loop_on:
+            self.pB_tt_recal.setEnabled(False)
+            self.pB_tt_cloop.setEnabled(False)
+        else:
+            self.pB_tt_recal.setEnabled(True)
+            self.pB_tt_cloop.setEnabled(True)
+
+        if self.ZER_WFC.calib_on or self.ZER_WFC.loop_on:
+            self.pB_zer_recal.setEnabled(False)
+            self.pB_zer_cloop.setEnabled(False)
+        else:
+            self.pB_zer_recal.setEnabled(True)
+            self.pB_zer_cloop.setEnabled(True)
+
+        if self.ZON_WFC.calib_on or self.ZON_WFC.loop_on:
+            self.pB_zo_recal.setEnabled(False)
+            self.pB_zo_cloop.setEnabled(False)
+        else:
+            self.pB_zo_recal.setEnabled(True)
+            self.pB_zo_cloop.setEnabled(True)
+            
     # =========================================================
     def refresh_wfs_display(self):
         ''' ----------------------------------------------------------
@@ -415,7 +483,6 @@ class MyWindow(QtGui.QMainWindow):
         ''' ----------------------------------------------------------
         Updates the colorbar used to display images in the GUI
         ---------------------------------------------------------- '''        
-        self.cam_counter -= 1
         cbar = str(self.cmB_cbar.currentText()).lower()
         try:
             exec 'self.mycmap = cm.%s' % (cbar,)
@@ -428,7 +495,7 @@ class MyWindow(QtGui.QMainWindow):
         ''' ----------------------------------------------------------
         Sets a new minimum value for the SH image display
         ---------------------------------------------------------- '''        
-        self.cam_counter -= 1
+        #self.cam_counter -= 1
         self.vmin = False
         if self.chB_min.isChecked():
             self.vmin = self.dspB_disp_min.value()
@@ -485,72 +552,145 @@ class MyWindow(QtGui.QMainWindow):
     # =========================================================
     #        wavefront control callbacks !!
     # =========================================================
-    # --- tip-tilt ---
+
+    # =========================================================
+    # ---                      TIP-TILT                     ---
+    # =========================================================
+        
     def tt_abort(self):
         if self.TT_WFC.keepgoing:
             self.TT_WFC.keepgoing = False
             self.TT_WFC.abort = True
             self.log("TT loop abort!", "red")
+            self.pB_tt_recal.setEnabled(True)
+            self.pB_tt_cloop.setEnabled(True)
 
+    # =========================================================
     def tt_reset_correc(self):
         self.TT_WFC.reset()
         self.log("TT correction reset!", "green")
 
+    # =========================================================
     def tt_calib(self):
         self.TT_WFC.keepgoing = False
         nav = self.spB_nav.value()
         a0 = self.dspB_tt_a0.value()
         self.TT_WFC.nav = nav
+        self.pB_tt_recal.setEnabled(False)
+        self.pB_tt_cloop.setEnabled(False)
         self.log("TT loop calibration starts", "blue")
         self.log("cal: nav=%d, a0=%.2f" % (nav, a0), "blue")
-        self.ttcal_Thread = GenericThread(self.TT_WFC.calibrate, a0=a0, reform=False)
+        self.ttcal_Thread = GenericThread(self.TT_WFC.calibrate,
+                                          a0=a0, reform=False)
         self.ttcal_Thread.start()
         
+    # =========================================================
     def tt_update_gain(self):
         gain = self.dspB_tt_gain.value()
         self.TT_WFC.gain = gain
-        self.log("gain updated =%.2f" % (gain,), "blue")
+        self.log("TT loop gain updated =%.2f" % (gain,), "blue")
 
+    # =========================================================
     def tt_cloop(self):
         self.ttloop_Thread = GenericThread(self.TT_WFC.cloop)
         self.log("TT closed loop!", "green")
         self.ttloop_Thread.start()
+        self.pB_tt_recal.setEnabled(False)
+        self.pB_tt_cloop.setEnabled(False)
 
-    # --- Zernike ---
+    # =========================================================
+    # ---                     Zernike                       ---
+    # =========================================================
     def zer_abort(self):
         if self.ZER_WFC.keepgoing:
             self.ZER_WFC.keepgoing = False
             self.ZER_WFC.abort = True
             self.log("Zernike loop abort!", "red")
+            self.pB_zer_recal.setEnabled(True)
+            self.pB_zer_cloop.setEnabled(True)
 
+    # =========================================================
     def zer_reset_correc(self):
         self.ZER_WFC.reset()
         self.log("Zernike correction reset!", "green")
 
+    # =========================================================
     def zer_calib(self):
         self.ZER_WFC.keepgoing = False
         nav = self.spB_nav.value()
         a0 = self.dspB_zer_a0.value()
         self.ZER_WFC.nav = nav
+        self.pB_zer_recal.setEnabled(False)
+        self.pB_zer_cloop.setEnabled(False)
         self.log("Zernike loop calibration starts", "blue")
         self.log("cal: nav=%d, a0=%.2f" % (nav, a0), "blue")
-        self.zercal_Thread = GenericThread(self.ZER_WFC.calibrate, a0=a0, reform=False)
+        self.zercal_Thread = GenericThread(self.ZER_WFC.calibrate,
+                                           a0=a0, reform=False)
         self.zercal_Thread.start()
         
+    # =========================================================
     def zer_update_gain(self):
         gain = self.dspB_zer_gain.value()
         self.ZER_WFC.gain = gain
-        self.log("gain updated =%.2f" % (gain,), "blue")
+        self.log("ZERNIKE loop gain updated =%.2f" % (gain,), "blue")
 
+    # =========================================================
     def zer_cloop(self):
         self.zerloop_Thread = GenericThread(self.ZER_WFC.cloop)
         self.log("Zernike closed loop!", "green")
         self.zerloop_Thread.start()
+        self.pB_zer_recal.setEnabled(False)
+        self.pB_zer_cloop.setEnabled(False)
 
+    # =========================================================
     def zer_update_nz(self):
         nz = self.dspB_zer_nz.value()
-        self.ZER_WFC = ZER_WFC(iz0=4, iz1=nz+4)
+        self.ZER_WFC = ZER_WFC(iz0=2, iz1=nz+2)
         self.log("Zernike basis of modes updated. Recalibrate", "orange")
+
+    # =========================================================
+    # ---                     ZONAL                         ---
+    # =========================================================
+    def zo_abort(self):
+        if self.ZON_WFC.keepgoing:
+            self.ZON_WFC.keepgoing = False
+            self.ZON_WFC.abort = True
+            self.log("ZON loop abort!", "red")
+            self.pB_zo_recal.setEnabled(True)
+            self.pB_zo_cloop.setEnabled(True)
+
+    # =========================================================
+    def zo_reset_correc(self):
+        self.ZON_WFC.reset()
+        self.log("ZON correction reset!", "green")
+
+    # =========================================================
+    def zo_calib(self):
+        self.ZON_WFC.keepgoing = False
+        nav = self.spB_nav.value()
+        a0 = self.dspB_zo_a0.value()
+        self.ZON_WFC.nav = nav
+        self.pB_zo_recal.setEnabled(False)
+        self.pB_zo_cloop.setEnabled(False)
+        self.log("ZON loop calibration starts", "blue")
+        self.log("cal: nav=%d, a0=%.2f" % (nav, a0), "blue")
+        self.zocal_Thread = GenericThread(self.ZON_WFC.calibrate,
+                                          a0=a0, reform=False)
+        self.zocal_Thread.start()
+        
+    # =========================================================
+    def zo_update_gain(self):
+        gain = self.dspB_zo_gain.value()
+        self.ZON_WFC.gain = gain
+        self.log("Zonal loop gain updated =%.2f" % (gain,), "blue")
+
+    # =========================================================
+    def zo_cloop(self):
+        self.ttloop_Thread = GenericThread(self.ZON_WFC.cloop)
+        self.log("ZON closed loop!", "green")
+        self.ttloop_Thread.start()
+        self.pB_zo_recal.setEnabled(False)
+        self.pB_zo_cloop.setEnabled(False)
 
 # ==========================================================
 # ==========================================================
