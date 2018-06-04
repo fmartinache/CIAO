@@ -25,11 +25,13 @@ class Cam():
             print("expected fifo does not exist")
 
         # exposure time control: only a finite number of possibilities
-        self.cam_tints = [0.001, 0.002, 0.005, 
-                          0.010, 0.020, 0.050,
-                          0.100, 0.200, 0.500]
+        self.cam_tints = [0.00001, 0.00002, 0.00005,
+                          0.00010, 0.00020, 0.00050,
+                          0.00100, 0.00200, 0.00500, 
+                          0.01000, 0.02000, 0.05000,
+                          0.10000, 0.20000, 0.50000]
 
-        self.cam_itint = 0
+        self.cam_itint = 6
         self.cam_tint = 0.001
 
         if self.connected:
@@ -37,23 +39,27 @@ class Cam():
 
     # =========================================================================
     def stream(self,):
-        self.cmd_fifo.write("stream")
-        self.cmd_fifo.flush()
-        self.streaming = True
+        if self.connected:
+            self.cmd_fifo.write("stream")
+            self.cmd_fifo.flush()
+            self.streaming = True
         
     # =========================================================================
     def pause(self,):
-        self.cmd_fifo.write("abort")
-        self.cmd_fifo.flush()
         self.streaming = False
+        if self.connected:
+            self.cmd_fifo.write("abort")
+            self.cmd_fifo.flush()
         
     # =========================================================================
     def quit(self,):
-        self.cmd_fifo.write("quit")
-        self.cmd_fifo.flush()
         self.streaming = False
         self.connected = False
 
+        if self.connected:
+            self.cmd_fifo.write("quit")
+            self.cmd_fifo.flush()
+        
     # =========================================================================
     def set_tint(self, tint):
         if self.streaming is True:
@@ -69,13 +75,15 @@ class Cam():
     def tint_dec(self,):
         self.cam_itint = max(self.cam_itint-1, 0)
         self.cam_tint = self.cam_tints[self.cam_itint]
-        self.set_tint(self.cam_tint)
+        if self.connected:
+            self.set_tint(self.cam_tint)
         
     # =========================================================================
     def tint_inc(self,):
-        self.cam_itint = min(self.cam_itint+1, 8)
+        self.cam_itint = min(self.cam_itint+1, len(self.cam_tints)-1)
         self.cam_tint = self.cam_tints[self.cam_itint]
-        self.set_tint(self.cam_tint)
+        if self.connected:
+            self.set_tint(self.cam_tint)
 
 # ==========================================================
 # ==========================================================

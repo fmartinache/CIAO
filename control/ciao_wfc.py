@@ -9,10 +9,6 @@ from numpy.linalg import pinv
 
 import sys
 import time
-import pdb
-import matplotlib.pyplot as plt
-plt.ion()
-plt.show()
 
 # =============================================================================
 # =============================================================================
@@ -97,7 +93,7 @@ class DM(object):
         dZ = 1 + i1 - i0
         res = np.zeros((dZ, self.dms, self.dms)).astype('float32')
         for i in range(i0, i1+1):
-            res[i-i0] = mkzer1(i, self.dms, self.dms/2) * self.dmmask
+            res[i-i0] = mkzer1(i, self.dms, self.dms/2 +1) * self.dmmask
         return(res)
     
     # -------------------------------------------------------------------------
@@ -127,6 +123,8 @@ class WFC(object):
         self.alpao_cor = shm_cor # correction
         self.alpao_cal = shm_cal # calibration
         self.nav = nav           # number of calibration coadds
+
+        self.shm_comb = shm('/tmp/comb.im.shm', verbose=False)
         
         self.shm_xslp = shm('/tmp/xslp.im.shm', verbose=False)
         self.shm_yslp = shm('/tmp/yslp.im.shm', verbose=False)
@@ -137,13 +135,36 @@ class WFC(object):
         self.gain      = 0.001 # default gain
         self.tsleep    = 1e-6 # for tests
         self.verbose   = False
+        self.abort     = False
+        self.calib_on  = False
         
+    # -------------------------------------------------------------------------
+    def get_slopes_comb(self, nav=20, reform=True):
+        ''' -------------------------------------------------------------------
+        test
+        ------------------------------------------------------------------- '''
+        cnt = self.shm_comb.get_counter()
+        tmp = self.shm_comb.get_data(check=cnt, reform=True)
+        cnt = self.shm_comb.get_counter()
+        
+        x_sig = tmp[0]
+        y_sig = tmp[1]
+        
+        for ii in range(nav-1):
+            tmp = self.shm_comb.get_data(check=cnt, reform=True)
+            cnt = self.shm_comb.get_counter()
+            x_sig += tmp[0]
+            y_sig += tmp[1]
+        x_sig /= nav
+        y_sig /= nav
+
+        return np.concatenate((x_sig.flatten(), y_sig.flatten()))
+    
     # -------------------------------------------------------------------------
     def get_slopes(self, nav=20, reform=True):
         ''' -------------------------------------------------------------------
         test
         ------------------------------------------------------------------- '''
-        
         x_cnt = self.shm_xslp.get_counter()
         x_sig = self.shm_xslp.get_data(check=x_cnt, reform=reform)
         x_cnt = self.shm_xslp.get_counter()
@@ -173,8 +194,10 @@ class WFC(object):
         ''' -------------------------------------------------------------------
         Generic calibration procedure for set of modes attached to the object
         ------------------------------------------------------------------- '''
+        self.calib_on = True
         dm0 = self.alpao_cal.get_data() # DM starting position
-        phot = self.shm_phot.get_data()
+        #phot = self.shm_phot.get_data()
+        phot = self.shm_comb.get_data()[2]
         
         RESP = [] # empty response matrix holder
         
@@ -183,18 +206,21 @@ class WFC(object):
         
         # go over the modes to be used for this WFC loop
         for ii in range(self.nmodes):
+            if self.abort:
+                self.abort = False
+                return
             self.alpao_cal.set_data((dm0 + self.modes[ii] * a0))
             time.sleep(self.tsleep) # for simulation only!
             sys.stdout.write("\rmode %d" % (ii+1,))
             sys.stdout.flush()
 
-            RESP.append(self.get_slopes(self.nav, reform=reform))
+            RESP.append(self.get_slopes_comb(self.nav, reform=reform))
 
         self.alpao_cal.set_data(dm0) # back to DM starting position
         self.RR = np.array(RESP) / a0
         self.RR[np.abs(self.RR) < 1e-2] = 0.0 # matrix clean up
         self.RTR = self.RR.dot(self.RR.T)
-        
+        self.calib_on = False
     # -------------------------------------------------------------------------
     def cloop(self,):
         ''' -------------------------------------------------------------------
@@ -203,7 +229,7 @@ class WFC(object):
 
         self.keepgoing = True
         while self.keepgoing:
-            sig = self.get_slopes(1, reform=False)
+            sig = self.get_slopes_comb(1, reform=False)
             dm0 = self.alpao_cor.get_data()
             #ww  = solve(self.RTR, np.dot(self.RR, sig)) + 1e-9
             ww = self.RRinv.dot(sig) + 1e-9

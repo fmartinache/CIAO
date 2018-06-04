@@ -7,10 +7,18 @@ import threading
 import os
 import time
 
-#instru = xs.instrument('CIAO')
-#instru.start(delay=0.05)
+simulation = True
 
-wfs = WFS(shmf="/tmp/ixon.im.shm")
+if simulation:
+    instru = xs.instrument('CIAO')
+    instru.start(delay=0.05)
+    wfs = WFS(shmf="/tmp/SHcam.im.shm")
+    wfs.update_grid(x0=0, y0=0, dx=13, dy=13)
+    wfs.update_cells()
+    wfs.define_SH_data()
+    
+else:
+    wfs = WFS(shmf="/tmp/ixon.im.shm")
 wfc = ZER_WFC(4, 15)
 
 #os.popen("shmview /tmp/ixon.im.shm &")
@@ -21,8 +29,9 @@ time.sleep(5)
 def close():
     wfs.keepgoing = False
     wfc.keepgoing = False
-    #instru.close()
-    
+    if simulation:
+        instru.close()
+
 # ------------------
 #   WFS thread
 # ------------------
