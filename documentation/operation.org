@@ -53,13 +53,29 @@ intéragir avec le matériel.
 * Lancement des serveurs de controle du matos
 
 Après les drivers, il faut lancer les serveurs pour le DM et la
-caméra. Le plus simple, c'est de mettre le DM en route en premier.
+caméra. Il est recommandé de lancer ces serveurs dans des fenêtres
+et/ou des terminaux qui restent ouverts. Pour limiter le nombre de
+fenetres ouvertes, le mieux c'est d'utiliser "screen", une vieille
+commande avec des raccourcis pas très ergonomiques mais qui permet de
+lancer des process depuis une fenetre ssh (par exemple), de les
+détacher pour qu'ils continuent à s'executer sans avoir à rester
+connecté, et qui permet de se connecter de temps en temps.
+
+Pour lancer screen, la commande est... vous avez deviné:
+
+#+begin_src sh
+screen
+#+end_src
+
+Un écran d'accueil vous indique que c'est bon. Dans cet
+environnement, on peut lancer les serveurs du DM et de la caméra.
 
 ** Miroir déformable
 
 La commande qui lance le serveur du DM est:
 
 #+begin_src sh
+cd
 alpao_server &
 #+end_src
 
@@ -80,7 +96,12 @@ Use x86_64 libraries.
 #+end_src
 
 On peut visualiser les 8 channels du DM simultanément avec un petit
-programme:
+programme... Screen ne permet pas d'utiliser des fenêtres
+graphiques. Pour l'utiliser, il faut détacher la session screen, avec
+le raccourci suivant:
+
+"Ctrl-A Ctrl-D" (pour "detach")
+
 
 #+begin_src sh
 dmview &
@@ -91,34 +112,45 @@ les #0 et #8 affichent quelquechose. Ce qui est appliqué sur le #0
 c'est le flat qui a été établi après réception du DM devant
 l'interféromètre de Zygo.
 
+[[file:dmview.png][dmview.png]]
+
 ** la caméra iXon
 
-Pour lancer le serveur de controle de la caméra la commande est:
+Pour lancer le serveur de controle de la caméra, il faut retourner
+dans l'environnement screen. Le mieux est de se rattacher à celui déjà
+créé pour le DM:
 
 #+begin_src sh
-ixon_server
+screen -r
+#+end_src
+
+Et une fois relancé, de créer une nouvelle fenêtre dans la même
+session screen:
+
+"Ctrl-A Ctrl-N"
+
+Dans lequel on peut lancer les commandes suiantes:
+
+#+begin_src sh
+cd ~/src/CIAO/ixon_server
+./ixon_server
 #+end_src
 
 Si tout se passe bien, on entend assez vite le bruit du shutter de la
-caméra. Mais il va falloir attendre un peu. En attendant, je vous
-raconte une histoire:
+caméra claquer une fois. Pour le moment, le refroidissement Pelletier
+de la caméra n'est pas actif, aussi le démarrage est rapide. Lorsqu'il
+faudra utiliser le mode EMCCD, il faudra recompiler le code en
+activant la mise à température.
 
-Ici, j'évite le & à la fin de la commande: le serveur affiche
-quelquefois des choses (lorsqu'on change le temps d'intégration par
-exemple): une fois que le serveur est lancé, le terminal qui l'a
-lancé est condamné à rester ouvert. Une solution c'est de lancer la
-meme commande depuis un terminal SCREEN (qui est installé sur la
-machine). L'intéret de ce terminal est qu'il peut etre détaché mais
-il vaut mieux etre familier avec ces raccourcis bizarres comme: Ctrl-A
-Ctrl-D, ... donc ici, j'évite.
-
-Le serveur de la caméra commence par mettre le détecteur à
-température. La consigne pour le moment est -5 degrés Celcius. Ca
-peut prendre plusieurs minutes. Mais à un moment, il va dire:
+Avec refroidissement activé, le démarrage peut prendre plusieurs
+minutes. Mais à un moment, il va dire:
 
 "iXon sever ready."
 
 La fete peut donc enfin commencer!
+
+On peut maintenant détacher (ou pas la session screen) avec le même
+"Ctrl-A Ctrl-D" de tout à l'heure.
 
 * Lancement du logiciel de controle de l'AO
 
@@ -127,8 +159,16 @@ Dans un nouveau terminal, ou un nouvel onglet du terminal en cours
 fenetre du terminal), il faut lancer la commande suivante:
 
 #+begin_src sh
-ciao_control /tmp/ixon.im.shm
+cd ~/src/CIAO/control
+./CIAO_MASTER 1&
 #+end_src
+
+L'option "1" est pour utiliser le GUI en mode vrai de vrai alors que
+l'option "0" est utilisée par Frantz pur développer en dehors du
+système.
+
+
+[[file:~/src/CIAO/documentation/CIAO_MASTER.png][CIAO_MASTER.png]]
 
 qui lance le GUI de controle de l'AO. Comme la caméra n'a encore pas
 fait d'acquisition, tout est à zero, nan, vide... mais il suffit
@@ -154,32 +194,34 @@ Tout se passe dans le panel gauche.
 
 Il faut lui envoyer la commande "quit". Plusieurs façons de faire:
 
-1. en ligne de commande, il faut écrire:
+1. depuis CIAO_MASTER, dans le panneau en haut à gauche, on peut
+   cliquer sur le bouton shutdown.
+
+2. en ligne de commande, il faut écrire:
 
 >> echo "quit" > /home/ciaodev/bin/ixon_fifo_in
-
-2. utiliser un petit outil graphique:
-
-depuis un terminal:
-
->> ixon_ctrl
-
-Et appuyer sur le bouton "quit".
 
 Dans tous les cas, on entend le shutter de la caméra qui se baisse et
 le refroidissement qui s'arrete. Tout est plus silencieux.
 
 ** Serveur du DM
 
-Pour le moment, seulement une possibilité en ligne de commande:
+Egalement depuis le GUI, le bouton "shutdown" du DM permet d'éteindre
+le serveur.
 
->> touch /home/ciaodev/bin/dm_stop
-
-
+Dans les deux cas, on peut vérifier en se connectant dans la fenêtre
+screen (avec "screen -r' et en alternant entre les deux sessions avec
+"Ctrl-A Ctrl-N" que les deux serveurs sont bien arrêtés.
 
 ** shutdown
+
 - Débrancher du secteur l'alim du refroidissement de la camera
 - éteindre le boitier d'alim du DM (inter à l'arrière du boitier)
+- débrancher le boitier d'alim du DM du secteur
 - shutdown de l'ordinateur
+- débrancher l'alim de l'ordinateur du secteur
+- débrancher la prise réseau de l'ordinateur
+
+
 
 

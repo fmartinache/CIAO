@@ -232,6 +232,7 @@ int main(int argc, char* argv[]) {
   unsigned long error;
   bool quit;
   float fChoice;
+  int iChoice;
   int gain = -1;
   int temp;
   int temp_min = 1, temp_max = 1;
@@ -245,6 +246,7 @@ int main(int argc, char* argv[]) {
 
   char *cmd_in = (char*) malloc(LINESZ * sizeof(char));
   char *auxstr = (char*) malloc(LINESZ * sizeof(char));
+  char *msgout = (char*) malloc(LINESZ * sizeof(char));
   mytest *= 1;
 
   cconf = (cam_config*) malloc(sizeof(cam_config));
@@ -358,6 +360,9 @@ int main(int argc, char* argv[]) {
 
   printf("EMCCD Gain = %d\n", gain);
 
+  GetEMGainRange(&glow, &ghigh);
+  printf("EM Gain range = %d - %d\n", glow, ghigh);
+
   GetMCPGain(&gain);
   printf("MCP   Gain = %d\n", gain);
 
@@ -429,7 +434,8 @@ int main(int argc, char* argv[]) {
   // ------------------------------------------
   //          main server loop
   // ------------------------------------------
-  int rfd = 0;
+  int rfd = 0; // file descriptor for input fifo
+  int wfd = 0; // file descriptor for output fifo
   int foo = -1;
 
   quit = false;
@@ -518,6 +524,29 @@ int main(int argc, char* argv[]) {
 
       sleep(1);
     }
+
+    // -----------------------------------
+    //       query exposure time
+    // -----------------------------------
+    if (strncmp(cmd_in, "emgain ", 7) == 0) {
+      sscanf(cmd_in, "%s %d", auxstr, &iChoice);
+      AbortAcquisition(); // camera command
+
+      error = SetEMCCDGain(iChoice);
+      sleep(1);
+    }
+
+    // -----------------------------------
+    //       query exposure time
+    // -----------------------------------
+    if (strncmp(cmd_in, "tint?", 5) == 0) {
+      wfd = open(myfifout, O_WRONLY);
+      sprintf(msgout, "%.5f", cconf->exp_time);
+      write(wfd, msgout, LINESZ);
+      close(wfd);
+      wfd = 0;
+    }
+
   } while(!quit);
   
   printf("Shutting things down!\n");

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1122</width>
-    <height>748</height>
+    <height>898</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -90,8 +90,8 @@
    <widget class="QWidget" name="gridLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>68</y>
+      <x>20</x>
+      <y>70</y>
       <width>178</width>
       <height>95</height>
      </rect>
@@ -110,7 +110,7 @@
      <item row="0" column="1">
       <widget class="QPushButton" name="pB_cam_shutdown">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="text">
         <string>SHDOWN</string>
@@ -160,7 +160,7 @@
      <item row="2" column="0">
       <widget class="QPushButton" name="pB_DM_shutdown">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="text">
         <string>SHDOWN</string>
@@ -169,6 +169,9 @@
      </item>
      <item row="3" column="0">
       <widget class="QPushButton" name="pB_DM_reset">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>RESET</string>
        </property>
@@ -177,7 +180,7 @@
      <item row="1" column="0">
       <widget class="QPushButton" name="pB_DM_start">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="text">
         <string>START</string>
@@ -320,7 +323,7 @@
         <double>50000.000000000000000</double>
        </property>
        <property name="value">
-        <double>250.000000000000000</double>
+        <double>180.000000000000000</double>
        </property>
       </widget>
      </item>
@@ -361,7 +364,7 @@
      <rect>
       <x>380</x>
       <y>140</y>
-      <width>301</width>
+      <width>304</width>
       <height>158</height>
      </rect>
     </property>
@@ -398,7 +401,7 @@
           <number>120</number>
          </property>
          <property name="value">
-          <number>1</number>
+          <number>0</number>
          </property>
         </widget>
        </item>
@@ -408,7 +411,7 @@
           <number>120</number>
          </property>
          <property name="value">
-          <number>1</number>
+          <number>0</number>
          </property>
         </widget>
        </item>
@@ -468,7 +471,7 @@
           <number>5000</number>
          </property>
          <property name="value">
-          <number>250</number>
+          <number>180</number>
          </property>
         </widget>
        </item>
@@ -564,8 +567,8 @@
    <widget class="QTextEdit" name="text_log">
     <property name="geometry">
      <rect>
-      <x>330</x>
-      <y>540</y>
+      <x>340</x>
+      <y>610</y>
       <width>380</width>
       <height>140</height>
      </rect>
@@ -634,8 +637,8 @@
      <rect>
       <x>370</x>
       <y>310</y>
-      <width>300</width>
-      <height>200</height>
+      <width>311</width>
+      <height>281</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -651,8 +654,8 @@
    <widget class="QPushButton" name="pB_WFS_ref">
     <property name="geometry">
      <rect>
-      <x>570</x>
-      <y>440</y>
+      <x>580</x>
+      <y>510</y>
       <width>91</width>
       <height>25</height>
      </rect>
@@ -667,8 +670,8 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>570</x>
-      <y>470</y>
+      <x>580</x>
+      <y>550</y>
       <width>91</width>
       <height>25</height>
      </rect>
@@ -682,7 +685,7 @@
      <rect>
       <x>790</x>
       <y>330</y>
-      <width>311</width>
+      <width>322</width>
       <height>96</height>
      </rect>
     </property>
@@ -827,7 +830,7 @@
      <rect>
       <x>740</x>
       <y>570</y>
-      <width>361</width>
+      <width>378</width>
       <height>96</height>
      </rect>
     </property>
@@ -969,7 +972,7 @@
      <rect>
       <x>790</x>
       <y>440</y>
-      <width>311</width>
+      <width>315</width>
       <height>96</height>
      </rect>
     </property>
@@ -1086,6 +1089,123 @@
      </item>
     </layout>
    </widget>
+   <widget class="QWidget" name="gridLayoutWidget_3">
+    <property name="geometry">
+     <rect>
+      <x>80</x>
+      <y>650</y>
+      <width>181</width>
+      <height>188</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout_4">
+     <item row="2" column="1">
+      <widget class="QPushButton" name="pB_tt_dy_m">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>50</width>
+         <height>50</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>-Y</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLabel" name="label_12">
+       <property name="text">
+        <string>offsets</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QPushButton" name="pB_tt_dx_m">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>50</width>
+         <height>50</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>-X</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QPushButton" name="pB_tt_dx_p">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>50</width>
+         <height>50</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>+X</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QPushButton" name="pB_tt_dy_p">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>50</width>
+         <height>50</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>+Y</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QLabel" name="lbl_stats_2">
+    <property name="geometry">
+     <rect>
+      <x>70</x>
+      <y>640</y>
+      <width>201</width>
+      <height>211</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Box</enum>
+    </property>
+    <property name="lineWidth">
+     <number>2</number>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -1093,7 +1213,7 @@
      <x>0</x>
      <y>0</y>
      <width>1122</width>
-     <height>27</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuQuit">

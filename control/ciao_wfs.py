@@ -99,14 +99,14 @@ class WFS():
         self.SH_xtmp = np.zeros((ncy, ncx))
         self.SH_ytmp = np.zeros((ncy, ncx))
 
-        self.shm_phot_gain = shm('/tmp/phot_gain.im.shm', data=self.SH_phot, 
-                                 verbose=False) # experiment!
+        self.shm_SNR = shm('/tmp/SNR.im.shm', data=self.SH_phot, 
+                           verbose=False) # experiment!
 
         self.shm_phot_inst = shm('/tmp/phot_inst.im.shm', data=self.SH_phot, 
                                  verbose=False) # experiment!
 
-        self.shm_xslp = shm('/tmp/xslp.im.shm',data=self.SH_xslp,verbose=False)
-        self.shm_yslp = shm('/tmp/yslp.im.shm',data=self.SH_yslp,verbose=False)
+        #self.shm_xslp = shm('/tmp/xslp.im.shm',data=self.SH_xslp,verbose=False)
+        #self.shm_yslp = shm('/tmp/yslp.im.shm',data=self.SH_yslp,verbose=False)
         self.shm_comb = shm('/tmp/comb.im.shm',data=self.SH_comb,verbose=False)
         
         for j in xrange(ncy):
@@ -149,6 +149,7 @@ class WFS():
             self.live_img = data
 
         self.im_cnt = self.shm_im.get_counter()  # image counter
+        bckgd = self.live_img.mean()
 
         #self.live_img[self.live_img <= self.vmin] = self.vmin
 
@@ -159,10 +160,11 @@ class WFS():
                 x0, x1 = int(np.round(xx[i])), int(np.round(xx[i+1]))
 
                 sub_arr           = self.live_img[y0:y1,x0:x1]
-                self.SH_phot[j,i] = sub_arr.max() #- self.threshold
+                self.SH_phot[j,i] = sub_arr.max()# - bckgd# max()
 
                 sub_arr[sub_arr < self.threshold] = self.threshold
-                if self.SH_phot[j,i] > self.threshold:
+                #if self.SH_phot[j,i] > self.threshold: # original line
+                if self.SH_phot[j,i] > 1.3 * bckgd: # 30 % above background?
                     (yc, xc) = centroid_position_0(sub_arr)
                 else:
                     (yc, xc) = (self.SH_xref[j,i], self.SH_yref[j,i])
@@ -186,8 +188,8 @@ class WFS():
         self.SH_comb[2] = self.SH_phot / self.SH_phot.max()
 
         self.shm_comb.set_data(self.SH_comb)
-        self.shm_xslp.set_data(self.SH_xslp)
-        self.shm_yslp.set_data(self.SH_yslp)
+        #self.shm_xslp.set_data(self.SH_xslp)
+        #self.shm_yslp.set_data(self.SH_yslp)
         self.shm_phot_inst.set_data(self.SH_phot)
         
         # here is information about the tip-tilt in pixels!

@@ -62,6 +62,7 @@ def main(argv):
             gui = MyWindow(simu = True)
         else:
             gui = MyWindow(simu = False)
+
     myqt.mainloop()
     myqt.gui_quit()
     sys.exit()
@@ -206,7 +207,7 @@ class MyWindow(QtGui.QMainWindow):
         # ==============================================
         #             top-menu actions
         # ==============================================
-        self.actionQuit.triggered.connect(sys.exit)
+        self.actionQuit.triggered.connect(self.exit)
         self.actionQuit.setShortcut('Ctrl+Q')
 
         if self.simu:
@@ -223,13 +224,24 @@ class MyWindow(QtGui.QMainWindow):
         self.pB_WFS_ref.clicked.connect(self.wfs_set_ref)
         self.pB_grid_set.clicked.connect(self.wfs_regrid)
         
-        # --- camera setup control ---
+        # --- camera /DM setup control ---
+        self.pB_DM_shutdown.clicked.connect(self.alpao_shutdown)
+        self.pB_DM_start.clicked.connect(self.alpao_start)
+
         self.mycam = Cam(fifo_dir="/home/ciaodev/bin/")
+        if self.mycam.connected:
+            self.pB_cam_stream.setEnabled(True)
+            self.pB_cam_stop.setEnabled(True)
+            self.pB_cam_tint_inc.setEnabled(True)
+            self.pB_cam_tint_dec.setEnabled(True)
+            self.pB_cam_shutdown.setEnabled(True)
+
         self.pB_cam_stream.clicked.connect(self.mycam.stream)
         self.pB_cam_stop.clicked.connect(self.mycam.pause)
 
         self.pB_cam_tint_inc.clicked.connect(self.mycam.tint_inc)
         self.pB_cam_tint_dec.clicked.connect(self.mycam.tint_dec)
+        self.pB_cam_shutdown.clicked.connect(self.ixon_shutdown)
 
         # ==============================================
         self.show()
@@ -267,6 +279,15 @@ class MyWindow(QtGui.QMainWindow):
         self.pB_zo_cloop.clicked.connect(self.zo_cloop)
         self.pB_zo_reset.clicked.connect(self.ZON_WFC.reset)
         self.dspB_zo_gain.valueChanged[float].connect(self.zo_update_gain)
+
+        # ====================================================
+        # live tip-tilt offsets
+        # ====================================================
+        self.pB_tt_dx_p.clicked.connect(self.ttx_offset_p)
+        self.pB_tt_dx_m.clicked.connect(self.ttx_offset_m)
+        self.pB_tt_dy_p.clicked.connect(self.tty_offset_p)
+        self.pB_tt_dy_m.clicked.connect(self.tty_offset_m)
+
 
     # =========================================================
     def wfs_regrid(self,):
@@ -316,6 +337,30 @@ class MyWindow(QtGui.QMainWindow):
         self.pB_WFS_on.setEnabled(True)
         self.pB_grid_set.setEnabled(True)
         self.log("Current pos. set as reference", "blue")
+
+    # =========================================================
+    def exit(self):
+        try:
+            pf.writeto(conf_dir+"ZER_CAL.fits",
+                       self.ZER_WFC.RR,
+                       overwrite=True)
+        except:
+            print("Zernike calibration matrices not saved")
+            
+        try:
+            pf.writeto(conf_dir+"TT_CAL.fits",
+                       self.TT_WFC.RR,
+                       overwrite=True)
+        except:
+            print("Tip-tilt calibration matrices not saved")
+            
+        try:
+            pf.writeto(conf_dir+"ZON_CAL.fits",
+                       self.ZON_WFC.RR,
+                       overwrite=True)
+        except:
+            print("Zonal calibration matrices not saved")            
+        sys.exit()
 
     # =========================================================
     def closeEvent(self, event):
@@ -414,10 +459,8 @@ class MyWindow(QtGui.QMainWindow):
         self.SH_yy = yy
         
         if self.chB_show_grid.isChecked():
-            print(adj)
-            print(pos)
             self.overlay.setData(pos=pos, adj=adj,
-                                 pen=(255,0,0,255), size=5,
+                                 pen=(255,0,0,255), size=0,
                                  #symbolPen=None, symbolBrush=None,
                                  pxMode=False)
         else:
@@ -691,6 +734,41 @@ class MyWindow(QtGui.QMainWindow):
         self.ttloop_Thread.start()
         self.pB_zo_recal.setEnabled(False)
         self.pB_zo_cloop.setEnabled(False)
+
+    # =========================================================
+    #         call-backs for tip-tilt offsets
+    # =========================================================
+    def ttx_offset_p(self):
+        self.wfs.SH_xref -= 1
+
+    # =========================================================
+    def ttx_offset_m(self):
+        self.wfs.SH_xref += 1
+
+    # =========================================================
+    def tty_offset_p(self):
+        self.wfs.SH_yref -= 1
+
+    # =========================================================
+    def tty_offset_m(self):
+        self.wfs.SH_yref += 1
+
+    # =========================================================
+    def ixon_shutdown(self):
+        self.mycam.quit()
+        self.pB_cam_stream.setEnabled(False)
+        self.pB_cam_stop.setEnabled(False)
+        self.pB_cam_tint_inc.setEnabled(False)
+        self.pB_cam_tint_dec.setEnabled(False)
+        self.pB_cam_shutdown.setEnabled(False)
+
+    # =========================================================
+    def alpao_shutdown(self):
+        os.system("touch "+"/home/ciaodev/bin/"+"dm_stop")
+
+    # =========================================================
+    def alpao_start(self):
+        os.system("cd /home/ciaodev/bin/; ./alpao_server&")
 
 # ==========================================================
 # ==========================================================

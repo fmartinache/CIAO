@@ -14,10 +14,12 @@ class Cam():
         self.fifo_out = fifo_dir + "ixon_fifo_out"
         self.connected = False
         self.streaming = False
-        
+        self.was_streaming = False
+
         if os.path.exists(self.fifo_in):
             try:
                 self.cmd_fifo = open(self.fifo_in, 'w')
+                #self.inf_fifo = open(self.fifo_out, 'r')
                 self.connected = True
             except:
                 print("could not open the fifo in write mode")
@@ -25,7 +27,7 @@ class Cam():
             print("expected fifo does not exist")
 
         # exposure time control: only a finite number of possibilities
-        self.cam_tints = [0.00001, 0.00002, 0.00005,
+        self.cam_tints = [0.00001, #0.00002, 0.00005,
                           0.00010, 0.00020, 0.00050,
                           0.00100, 0.00200, 0.00500, 
                           0.01000, 0.02000, 0.05000,
@@ -54,23 +56,31 @@ class Cam():
     # =========================================================================
     def quit(self,):
         self.streaming = False
-        self.connected = False
-
         if self.connected:
             self.cmd_fifo.write("quit")
             self.cmd_fifo.flush()
-        
+        self.connected = False   
+     
     # =========================================================================
     def set_tint(self, tint):
+        self.was_streaming = False
         if self.streaming is True:
-            was_streaming = True
+            self.was_streaming = True
             self.pause()
         self.cmd_fifo.write("tint %.4f" % (tint,))
         self.cmd_fifo.flush()
-        if was_streaming:
+        if self.was_streaming:
             self.stream()
             self.streaming = True
 
+    # =========================================================================
+    def get_tint(self):
+        if self.connected:
+            self.cmd_fifo.write("tint?")
+            self.cmd_fifo.flush()
+            tmp = float(self.inf_fifo.read())
+            print tmp
+            
     # =========================================================================
     def tint_dec(self,):
         self.cam_itint = max(self.cam_itint-1, 0)

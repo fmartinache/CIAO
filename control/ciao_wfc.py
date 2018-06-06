@@ -127,10 +127,6 @@ class WFC(object):
         
         self.shm_comb = shm('/tmp/comb.im.shm', verbose=False)
         
-        self.shm_xslp = shm('/tmp/xslp.im.shm', verbose=False)
-        self.shm_yslp = shm('/tmp/yslp.im.shm', verbose=False)
-        self.shm_phot = shm('/tmp/phot_inst.im.shm', verbose=False)
-        
         self.modes     = np.array([self.DM.xdm, self.DM.ydm]) # (ttilt)
         self.keepgoing = False
         self.gain      = 0.001 # default gain
@@ -141,7 +137,7 @@ class WFC(object):
         self.loop_on   = False
         
     # -------------------------------------------------------------------------
-    def get_slopes_comb(self, nav=20, reform=True):
+    def get_slopes(self, nav=20, reform=True):
         ''' -------------------------------------------------------------------
         test
         ------------------------------------------------------------------- '''
@@ -151,42 +147,22 @@ class WFC(object):
         
         x_sig = tmp[0]
         y_sig = tmp[1]
-        
+        phot  = tmp[2]
+
         for ii in range(nav-1):
             tmp = self.shm_comb.get_data(check=cnt, reform=True)
             cnt = self.shm_comb.get_counter()
             x_sig += tmp[0]
             y_sig += tmp[1]
+            phot  += tmp[2]
         x_sig /= nav
         y_sig /= nav
+        phot /= nav
 
+        x_sig[phot == 0] = 0.0
+        y_sig[phot == 0] = 0.0
         return np.concatenate((x_sig.flatten(), y_sig.flatten()))
     
-    # -------------------------------------------------------------------------
-    def get_slopes(self, nav=20, reform=True):
-        ''' -------------------------------------------------------------------
-        test
-        ------------------------------------------------------------------- '''
-        x_cnt = self.shm_xslp.get_counter()
-        x_sig = self.shm_xslp.get_data(check=x_cnt, reform=reform)
-        x_cnt = self.shm_xslp.get_counter()
-        
-        y_cnt = self.shm_yslp.get_counter()
-        y_sig = self.shm_yslp.get_data(check=y_cnt, reform=reform)
-        y_cnt = self.shm_yslp.get_counter()
-        
-        for ii in range(nav-1):
-            x_sig += self.shm_xslp.get_data(check=x_cnt, reform=reform)
-            x_cnt  = self.shm_xslp.get_counter()
-            
-            y_sig += self.shm_yslp.get_data(check=y_cnt, reform=reform)
-            y_cnt  = self.shm_yslp.get_counter()
-            
-        x_sig /= nav
-        y_sig /= nav
-
-        return np.concatenate((x_sig, y_sig))
-
     # -------------------------------------------------------------------------
     def reset(self,):
         self.alpao_cor.set_data(0.0 * self.alpao_cor.get_data())
@@ -201,7 +177,7 @@ class WFC(object):
         self.a0 = a0
         
         dm0 = self.alpao_cal.get_data() # DM starting position
-        #phot = self.shm_phot.get_data()
+
         phot = self.shm_comb.get_data()[2]
         
         RESP = [] # empty response matrix holder
@@ -220,10 +196,10 @@ class WFC(object):
             sys.stdout.write("\rmode %d" % (ii+1,))
             sys.stdout.flush()
 
-            RESP.append(self.get_slopes_comb(self.nav, reform=reform))
+            RESP.append(self.get_slopes(self.nav, reform=reform))
 
         self.alpao_cal.set_data(dm0) # back to DM starting position
-        self.RR = np.array(RESP)# / a0
+        self.RR = np.array(RESP)
         #self.RR[np.abs(self.RR) < 1e-2] = 0.0 # matrix clean up
         self.RTR = self.RR.dot(self.RR.T)
         self.calib_on = False
@@ -240,8 +216,8 @@ class WFC(object):
             print("Calibration matrix %s not available" % (fname))
             return
         self.RRinv = pinv(self.RR.T, rcond=0.1)
-        
-        # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
     def cloop(self,):
         ''' -------------------------------------------------------------------
         Generic closed-loop procedure for the modes attached to the object.
@@ -250,12 +226,11 @@ class WFC(object):
         self.keepgoing = True
         self.loop_on = True
         while self.keepgoing:
-            sig = self.get_slopes_comb(1, reform=False)
-            dm0 = self.alpao_cor.get_data()
-            #ww  = solve(self.RTR, np.dot(self.RR, sig)) + 1e-9
-            ee = self.a0 * self.RRinv.dot(sig)# + 1e-15
-            cor = np.sum(self.modes * ee)
-            #cor = np.average(self.modes, weights=ee, axis=0) * self.nmodes * ww.sum()
+            sig = self.get_slopes(1, reform=False) # WFS slopes
+            dm0 = self.alpao_cor.get_data()        # DM shape B4 correction
+            ee  = self.a0 * self.RRinv.dot(sig)    # error signal
+            cor = np.average(self.modes, weights=ee, axis=0) 
+            cor *= self.nmodes * ee.sum()
             dm1 = 0.999 * (dm0 - self.gain * cor.astype('float32'))
             self.alpao_cor.set_data(dm1)
 
@@ -263,10 +238,11 @@ class WFC(object):
 
             if self.verbose:
                 sys.stdout.write(
-                    "\rcoeffs: "+ "%+.3f " * self.nmodes % (tuple(ww)))
+                    "\rcoeffs: "+ "%+.3f " * self.nmodes % (tuple(ee)))
                 sys.stdout.flush()
         self.loop_on = False
         print("\nWFC loop opened.")
+
 # =============================================================================
 # =============================================================================
 
