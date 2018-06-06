@@ -180,7 +180,7 @@
      <item row="1" column="0">
       <widget class="QPushButton" name="pB_DM_start">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="text">
         <string>START</string>
@@ -748,7 +748,7 @@
        <item row="0" column="1">
         <widget class="QDoubleSpinBox" name="dspB_tt_a0">
          <property name="value">
-          <double>0.100000000000000</double>
+          <double>0.050000000000000</double>
          </property>
         </widget>
        </item>
@@ -879,7 +879,7 @@
           <number>20</number>
          </property>
          <property name="value">
-          <number>5</number>
+          <number>10</number>
          </property>
         </widget>
        </item>
@@ -902,7 +902,7 @@
           <double>0.010000000000000</double>
          </property>
          <property name="value">
-          <double>0.100000000000000</double>
+          <double>0.050000000000000</double>
          </property>
         </widget>
        </item>
@@ -931,7 +931,7 @@
           <double>0.010000000000000</double>
          </property>
          <property name="value">
-          <double>0.100000000000000</double>
+          <double>0.200000000000000</double>
          </property>
         </widget>
        </item>
@@ -1040,6 +1040,9 @@
        </item>
        <item row="2" column="2">
         <widget class="QPushButton" name="pB_zo_cloop">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>CLOOP</string>
          </property>
@@ -1073,6 +1076,9 @@
        </item>
        <item row="0" column="2">
         <widget class="QPushButton" name="pB_zo_recal">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>RECAL</string>
          </property>
@@ -1186,25 +1192,6 @@
       </widget>
      </item>
     </layout>
-   </widget>
-   <widget class="QLabel" name="lbl_stats_2">
-    <property name="geometry">
-     <rect>
-      <x>70</x>
-      <y>640</y>
-      <width>201</width>
-      <height>211</height>
-     </rect>
-    </property>
-    <property name="frameShape">
-     <enum>QFrame::Box</enum>
-    </property>
-    <property name="lineWidth">
-     <number>2</number>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

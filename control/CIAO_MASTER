@@ -254,8 +254,8 @@ class MyWindow(QtGui.QMainWindow):
 
         # --- wavefront control callbacks ---
         self.TT_WFC = TT_WFC()               # tip-tilt wavefront control
-        self.ZER_WFC = ZER_WFC(iz0=2, iz1=5) # Zernike wavefront control
         self.ZON_WFC = ZON_WFC()             # Zonal wavefront contrl
+        self.ZER_WFC = ZER_WFC(iz0=2, iz1=5) # Zernike wavefront control
 
         self.TT_WFC.reload_cal(fname=conf_dir+"TT_CAL.fits")
         self.ZON_WFC.reload_cal(fname=conf_dir+"ZON_CAL.fits")
@@ -266,19 +266,22 @@ class MyWindow(QtGui.QMainWindow):
         self.pB_tt_cloop.clicked.connect(self.tt_cloop)
         self.pB_tt_reset.clicked.connect(self.TT_WFC.reset)
         self.dspB_tt_gain.valueChanged[float].connect(self.tt_update_gain)
+        self.tt_update_gain()
 
+        self.dspB_zer_nz.valueChanged[int].connect(self.zer_update_nz)
         self.pB_zer_abort.clicked.connect(self.zer_abort)
         self.pB_zer_recal.clicked.connect(self.zer_calib)
         self.pB_zer_cloop.clicked.connect(self.zer_cloop)
         self.pB_zer_reset.clicked.connect(self.ZER_WFC.reset)
         self.dspB_zer_gain.valueChanged[float].connect(self.zer_update_gain)
-        self.dspB_zer_nz.valueChanged[int].connect(self.zer_update_nz)
-        
+        self.zer_update_gain()
+
         self.pB_zo_abort.clicked.connect(self.zo_abort)
         self.pB_zo_recal.clicked.connect(self.zo_calib)
         self.pB_zo_cloop.clicked.connect(self.zo_cloop)
         self.pB_zo_reset.clicked.connect(self.ZON_WFC.reset)
         self.dspB_zo_gain.valueChanged[float].connect(self.zo_update_gain)
+        self.zo_update_gain()
 
         # ====================================================
         # live tip-tilt offsets
@@ -761,14 +764,17 @@ class MyWindow(QtGui.QMainWindow):
         self.pB_cam_tint_inc.setEnabled(False)
         self.pB_cam_tint_dec.setEnabled(False)
         self.pB_cam_shutdown.setEnabled(False)
+        self.log("iXon camera was shut down", "blue")
 
     # =========================================================
     def alpao_shutdown(self):
         os.system("touch "+"/home/ciaodev/bin/"+"dm_stop")
+        self.log("alpao DM was shut down", "blue")
 
     # =========================================================
     def alpao_start(self):
-        os.system("cd /home/ciaodev/bin/; ./alpao_server&")
+        os.system("cd /home/ciaodev/bin/; ./alpao_server &")
+        self.log("alpao DM was turned on!", "blue")
 
 # ==========================================================
 # ==========================================================
