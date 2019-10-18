@@ -831,7 +831,7 @@
       <x>740</x>
       <y>570</y>
       <width>378</width>
-      <height>96</height>
+      <height>120</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="vl_zz">
@@ -860,13 +860,16 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gl_zz">
-       <item row="0" column="2">
-        <widget class="QLabel" name="label_13">
-         <property name="text">
-          <string>cal. ampli</string>
+       <item row="2" column="1">
+        <widget class="QDoubleSpinBox" name="dspB_zer_gain">
+         <property name="maximum">
+          <double>0.500000000000000</double>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <property name="singleStep">
+          <double>0.010000000000000</double>
+         </property>
+         <property name="value">
+          <double>0.050000000000000</double>
          </property>
         </widget>
        </item>
@@ -883,26 +886,13 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
+       <item row="2" column="0">
         <widget class="QLabel" name="label_15">
          <property name="text">
           <string>gain</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QDoubleSpinBox" name="dspB_zer_gain">
-         <property name="maximum">
-          <double>0.500000000000000</double>
-         </property>
-         <property name="singleStep">
-          <double>0.010000000000000</double>
-         </property>
-         <property name="value">
-          <double>0.050000000000000</double>
          </property>
         </widget>
        </item>
@@ -916,7 +906,31 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="3">
+       <item row="2" column="3">
+        <widget class="QPushButton" name="pB_zer_abort">
+         <property name="text">
+          <string>ABORT</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QPushButton" name="pB_zer_cloop">
+         <property name="text">
+          <string>CLOOP</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_13">
+         <property name="text">
+          <string>cal. ampli</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
         <widget class="QDoubleSpinBox" name="dspB_zer_a0">
          <property name="decimals">
           <number>2</number>
@@ -936,27 +950,13 @@
         </widget>
        </item>
        <item row="1" column="3">
-        <widget class="QPushButton" name="pB_zer_abort">
-         <property name="text">
-          <string>ABORT</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QPushButton" name="pB_zer_cloop">
-         <property name="text">
-          <string>CLOOP</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="4">
         <widget class="QPushButton" name="pB_zer_reset">
          <property name="text">
           <string>RESET</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="4">
+       <item row="1" column="2">
         <widget class="QPushButton" name="pB_zer_recal">
          <property name="text">
           <string>RECAL</string>

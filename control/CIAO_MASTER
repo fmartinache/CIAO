@@ -144,6 +144,7 @@ class MyWindow(QtGui.QMainWindow):
         self.mycmap  = cm.magma
         self.pwr     = 1.0
         self.thresh  = 0
+        self.cam_counter = -1
         
         super(MyWindow, self).__init__()
         if not os.path.exists(conf_dir + guidef):
@@ -215,7 +216,6 @@ class MyWindow(QtGui.QMainWindow):
         else:
             self.shmf = "/tmp/ixon.im.shm"
 
-        self.cam_counter = -1
         self.shm_cam = shm(self.shmf)
         self.wfs = WFS(shmf=self.shmf) # linking the wavefront sensor
 
@@ -264,7 +264,7 @@ class MyWindow(QtGui.QMainWindow):
         self.pB_tt_abort.clicked.connect(self.tt_abort)
         self.pB_tt_recal.clicked.connect(self.tt_calib)
         self.pB_tt_cloop.clicked.connect(self.tt_cloop)
-        self.pB_tt_reset.clicked.connect(self.TT_WFC.reset)
+        self.pB_tt_reset.clicked.connect(self.tt_reset_correc)
         self.dspB_tt_gain.valueChanged[float].connect(self.tt_update_gain)
         self.tt_update_gain()
 
@@ -272,14 +272,14 @@ class MyWindow(QtGui.QMainWindow):
         self.pB_zer_abort.clicked.connect(self.zer_abort)
         self.pB_zer_recal.clicked.connect(self.zer_calib)
         self.pB_zer_cloop.clicked.connect(self.zer_cloop)
-        self.pB_zer_reset.clicked.connect(self.ZER_WFC.reset)
+        self.pB_zer_reset.clicked.connect(self.zer_reset_correc)
         self.dspB_zer_gain.valueChanged[float].connect(self.zer_update_gain)
         self.zer_update_gain()
 
         self.pB_zo_abort.clicked.connect(self.zo_abort)
         self.pB_zo_recal.clicked.connect(self.zo_calib)
         self.pB_zo_cloop.clicked.connect(self.zo_cloop)
-        self.pB_zo_reset.clicked.connect(self.ZON_WFC.reset)
+        self.pB_zo_reset.clicked.connect(self.zo_reset_correc)
         self.dspB_zo_gain.valueChanged[float].connect(self.zo_update_gain)
         self.zo_update_gain()
 
@@ -610,6 +610,8 @@ class MyWindow(QtGui.QMainWindow):
             self.log("TT loop abort!", "red")
             self.pB_tt_recal.setEnabled(True)
             self.pB_tt_cloop.setEnabled(True)
+        else:
+            self.log("TT loop was not running!", "orange")
 
     # =========================================================
     def tt_reset_correc(self):
@@ -654,6 +656,8 @@ class MyWindow(QtGui.QMainWindow):
             self.log("Zernike loop abort!", "red")
             self.pB_zer_recal.setEnabled(True)
             self.pB_zer_cloop.setEnabled(True)
+        else:
+            self.log("ZER loop was not running!", "orange")
 
     # =========================================================
     def zer_reset_correc(self):
@@ -704,6 +708,8 @@ class MyWindow(QtGui.QMainWindow):
             self.log("ZON loop abort!", "red")
             self.pB_zo_recal.setEnabled(True)
             self.pB_zo_cloop.setEnabled(True)
+        else:
+            self.log("ZON loop was not running!", "orange")
 
     # =========================================================
     def zo_reset_correc(self):

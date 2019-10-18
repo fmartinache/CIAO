@@ -127,9 +127,9 @@ screen -r
 Et une fois relancé, de créer une nouvelle fenêtre dans la même
 session screen:
 
-"Ctrl-A Ctrl-N"
+"Ctrl-A Ctrl-C"
 
-Dans lequel on peut lancer les commandes suiantes:
+Dans lequel on peut lancer les commandes suivantes:
 
 #+begin_src sh
 cd ~/src/CIAO/ixon_server
@@ -151,6 +151,25 @@ La fete peut donc enfin commencer!
 
 On peut maintenant détacher (ou pas la session screen) avec le même
 "Ctrl-A Ctrl-D" de tout à l'heure.
+
+** remarques complémentaires sur SCREEN
+
+*** Pour se rattacher à une session en cours:
+
+#+begin_src sh
+screen -r
+#+end_src
+
+*** commandes dans une session SCREEN
+
+|------------------------------+---------------|
+| Intention                    | Commande      |
+|------------------------------+---------------|
+| Créer une nouvelle fenêtre   | Ctrl-A Ctrl-C |
+| Passer à la fenêtre suivante | Ctrl-A Ctrl-N |
+| Détacher la session          | Ctrl-A Ctrl-D |
+| Fermer la fenêtre en cours   | exit          |
+|------------------------------+---------------|
 
 * Lancement du logiciel de controle de l'AO
 

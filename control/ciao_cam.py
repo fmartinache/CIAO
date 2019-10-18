@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import os
+import time
+import pdb
 
 class Cam():
     ''' -----------------------------------------------------------------------
@@ -27,17 +29,21 @@ class Cam():
             print("expected fifo does not exist")
 
         # exposure time control: only a finite number of possibilities
-        self.cam_tints = [0.00001, #0.00002, 0.00005,
+        self.cam_tints = [0.00001, 0.00002, 0.00005,
                           0.00010, 0.00020, 0.00050,
                           0.00100, 0.00200, 0.00500, 
                           0.01000, 0.02000, 0.05000,
                           0.10000, 0.20000, 0.50000]
 
-        self.cam_itint = 6
-        self.cam_tint = 0.001
-
         if self.connected:
-            self.set_tint(self.cam_tints[self.cam_itint])
+            try:
+                self.get_tint()
+            except:
+                self.cam_tint = 0.001 # fall back on this value
+
+            #pdb.set_trace()
+            self.cam_itint = self.cam_tints.index(self.cam_tint)
+            #self.set_tint(self.cam_tints[self.cam_itint])
 
     # =========================================================================
     def stream(self,):
@@ -78,9 +84,11 @@ class Cam():
         if self.connected:
             self.cmd_fifo.write("tint?")
             self.cmd_fifo.flush()
+            time.sleep(0.5)
             tmp = float(self.inf_fifo.read())
-            print tmp
-            
+            #print tmp
+            self.cam_tint = tmp # assign tint to current structure
+
     # =========================================================================
     def tint_dec(self,):
         self.cam_itint = max(self.cam_itint-1, 0)

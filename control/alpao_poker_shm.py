@@ -10,9 +10,11 @@ simulation = False# True # set to False when running the ALPAO DM
 
 home = os.getenv('HOME')
 
-sys.path.append(home+"/src/python/libs/")
-from scexao_shm import shm
+#sys.path.append(home+"/src/python/libs/")
+from xaosim.shmlib import shm
+#from scexao_shm import shm
 
+sys.path.append(home+"/src/python/libs/")
 import PYG_GUI
 from PYG_GUI import *
 
