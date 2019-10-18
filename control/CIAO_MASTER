@@ -253,9 +253,9 @@ class MyWindow(QtGui.QMainWindow):
         self.log("CIAO ready to rock!")
 
         # --- wavefront control callbacks ---
-        self.TT_WFC = TT_WFC()               # tip-tilt wavefront control
-        self.ZON_WFC = ZON_WFC()             # Zonal wavefront contrl
-        self.ZER_WFC = ZER_WFC(iz0=2, iz1=5) # Zernike wavefront control
+        self.TT_WFC = TT_WFC()                # tip-tilt wavefront control
+        self.ZON_WFC = ZON_WFC()              # Zonal wavefront contrl
+        self.ZER_WFC = ZER_WFC(iz0=2, iz1=12) # Zernike wavefront control
 
         self.TT_WFC.reload_cal(fname=conf_dir+"TT_CAL.fits")
         self.ZON_WFC.reload_cal(fname=conf_dir+"ZON_CAL.fits")
