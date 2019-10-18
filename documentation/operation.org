@@ -219,7 +219,8 @@ cd ~/src/CIAO/control
 
 lance un petit programme dont l'interface ressemble à ceci:
 
-[[./pokem.png][poker snapshot]]
+[[pokem.png]]
+
 
 Le plus simple, c'est (pour une fois) d'utiliser la souris pour sélectionner l'actionneur qu'on a envie de tripoter et de cliquer dessus. Ensuite, on peut jouer sur la commande envoyée à l'actionneur en utilisant la roulette de la souris ou les flèches horizontales (gauche - droite) sur le clavier. Si l'effet de la modulation n'est pas assez rapide à vos yeux, appuyer sur le SHIFT gauche du clavier pendant la manipe augmente la modulation par un facteur 10.
 
