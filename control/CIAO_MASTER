@@ -30,6 +30,8 @@ import time
 
 import astropy.io.fits as pf
 
+print("Welcome to CIAO_CONTROL!")
+
 # =====================================================================
 home = os.getenv('HOME')
 conf_dir = home+'/.config/ciao/'
@@ -217,6 +219,7 @@ class MyWindow(QtGui.QMainWindow):
             self.shmf = "/tmp/ixon.im.shm"
 
         self.shm_cam = shm(self.shmf)
+        #self.wfs = WFS(shmf=self.shmf, ncpu=5) # linking the wavefront sensor
         self.wfs = WFS(shmf=self.shmf) # linking the wavefront sensor
 
         self.pB_WFS_off.clicked.connect(self.wfs_stop)
@@ -393,6 +396,7 @@ class MyWindow(QtGui.QMainWindow):
             print("Zonal calibration matrices not saved")
             
         self.wfs.keepgoing     = False
+        self.wfs.stop() # explicit for release of CPUs
         self.TT_WFC.keepgoing  = False
         self.ZER_WFC.keeggoing = False
         self.ZON_WFC.keeggoing = False

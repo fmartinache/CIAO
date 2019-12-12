@@ -61,6 +61,7 @@ zoom   = 1                  # zoom for the display of the images
 mycmap = cm.jet             # colormap
 dms    = 11                 # DM size
 z0, z1 = 4, 17              # Zernike indices
+z0, z1 = 2, 15              # Zernike indices
 dz = z1 - z0 + 1
 
 wmodes = ["MANUAL", "AUTO", "RECAL"]
@@ -201,6 +202,10 @@ rect1.center    = (5+xws/2, 5+yws/2)
 
 
 zlabel = ['focus', 'astig1', 'astig2', 'coma1', 'coma2', 
+          'trfl1', 'trfl2', 'spheric', 'quad1', 'quad2',
+          'secast1', 'secast2', 'unknown1', 'unknown2']
+
+zlabel = ['tip', 'tilt', 'focus', 'astig1', 'astig2', 'coma1', 'coma2', 
           'trfl1', 'trfl2', 'spheric', 'quad1', 'quad2',
           'secast1', 'secast2', 'unknown1', 'unknown2']
 

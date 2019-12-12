@@ -135,6 +135,8 @@ class WFC(object):
         self.abort     = False
         self.calib_on  = False
         self.loop_on   = False
+        self.avgtiming = 0.
+        self.timingT   = 100
         
     # -------------------------------------------------------------------------
     def get_slopes(self, nav=20, reform=True):
@@ -142,14 +144,16 @@ class WFC(object):
         test
         ------------------------------------------------------------------- '''
         cnt = self.shm_comb.get_counter()
+	#time_start = time.time()
         tmp = self.shm_comb.get_data(check=cnt, reform=True)
+	#print("Timing call get_data: %.3e" % (time.time() - time_start))
         cnt = self.shm_comb.get_counter()
         
         x_sig = tmp[0]
         y_sig = tmp[1]
         phot  = tmp[2]
 
-        for ii in range(nav-1):
+       	for ii in range(nav-1):
             tmp = self.shm_comb.get_data(check=cnt, reform=True)
             cnt = self.shm_comb.get_counter()
             x_sig += tmp[0]
@@ -192,7 +196,7 @@ class WFC(object):
                 self.calib_on = False
                 return
             self.alpao_cal.set_data((dm0 + self.modes[ii] * a0))
-            time.sleep(self.tsleep) # for simulation only!
+            #time.sleep(self.tsleep) # for simulation only!
             sys.stdout.write("\rmode %d" % (ii+1,))
             sys.stdout.flush()
 
@@ -225,16 +229,67 @@ class WFC(object):
 
         self.keepgoing = True
         self.loop_on = True
+        self.avgtiming = 0.
+        counter = 0
+        time_start = time.time()
+        time_end = time_start
+        time_A = 0.
+        time_B = 0.
+        time_C = 0.
+        time_D = 0.
+        time_E = 0.
+        time_F = 0.
+        time_G = 0.
+	
+	time_tmp = time_start
+        diff_time = 0.
         while self.keepgoing:
+	    time_tmp = time.time()
             sig = self.get_slopes(1, reform=False) # WFS slopes
-            dm0 = self.alpao_cor.get_data()        # DM shape B4 correction
-            ee  = self.a0 * self.RRinv.dot(sig)    # error signal
-            cor = np.average(self.modes, weights=ee, axis=0) 
-            cor *= self.nmodes * ee.sum()
-            dm1 = 0.999 * (dm0 - self.gain * cor.astype('float32'))
-            self.alpao_cor.set_data(dm1)
+	    time_A += time.time() - time_tmp
+            
+	    time_tmp = time.time()
+	    dm0 = self.alpao_cor.get_data()        # DM shape B4 correction  
+	    time_B += time.time() - time_tmp
 
-            time.sleep(self.tsleep)
+	    time_tmp = time.time()
+            ee  = self.a0 * self.RRinv.dot(sig)    # error signal
+	    time_C += time.time() - time_tmp
+
+	    time_tmp = time.time()
+            cor = np.average(self.modes, weights=ee, axis=0) 
+	    time_D += time.time() - time_tmp
+
+	    time_tmp = time.time()
+            cor *= self.nmodes * ee.sum()
+	    time_E += time.time() - time_tmp
+
+	    time_tmp = time.time()
+            dm1 = 0.999 * (dm0 - self.gain * cor.astype('float32'))
+	    time_F += time.time() - time_tmp
+            
+ 	    time_tmp = time.time()
+            self.alpao_cor.set_data(dm1)
+	    time_G += time.time() - time_tmp
+
+            '''time.sleep(self.tsleep)'''
+
+            counter += 1
+            if counter % self.timingT == 0:
+                time_end = time.time()
+                self.avgtiming = (time_end - time_start)/counter
+                '''print("cloop average timing: %.3f %.3f %.3f %.3f %.3f %.3f %.3f"% (self.avgtiming, 1./self.avgtiming))'''
+                print("cloop average timing: %.3f %.3f %.3f %.3f %.3f %.3f %.3f"% (time_A/counter,time_B/counter,time_C/counter,time_D/counter,time_E/counter,time_F/counter,time_G/counter))
+                time_start = time_end
+                counter = 0
+        	time_A = 0.
+        	time_B = 0.
+        	time_C = 0.
+        	time_D = 0.
+        	time_E = 0.
+        	time_F = 0.
+        	time_G = 0.
+		
 
             if self.verbose:
                 sys.stdout.write(
