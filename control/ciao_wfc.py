@@ -170,6 +170,7 @@ class WFC(object):
     # -------------------------------------------------------------------------
     def reset(self,):
         self.alpao_cor.set_data(0.0 * self.alpao_cor.get_data())
+        self.alpao_cal.set_data(0.0 * self.alpao_cor.get_data())
         
     # -------------------------------------------------------------------------
     def calibrate(self, a0 = 0.1, reform=False):
@@ -196,7 +197,7 @@ class WFC(object):
                 self.calib_on = False
                 return
             self.alpao_cal.set_data((dm0 + self.modes[ii] * a0))
-            #time.sleep(self.tsleep) # for simulation only!
+            time.sleep(self.tsleep) # for simulation only!
             sys.stdout.write("\rmode %d" % (ii+1,))
             sys.stdout.flush()
 
@@ -257,7 +258,10 @@ class WFC(object):
 	    time_C += time.time() - time_tmp
 
 	    time_tmp = time.time()
-            cor = np.average(self.modes, weights=ee, axis=0) 
+            try:
+                cor = np.average(self.modes, weights=ee, axis=0) 
+            except:
+                cor = 0.0 * self.modes[0]
 	    time_D += time.time() - time_tmp
 
 	    time_tmp = time.time()

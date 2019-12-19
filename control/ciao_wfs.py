@@ -7,6 +7,7 @@ import datetime
 import time
 import fitsio
 from fitsio import FITS,FITSHDR
+import astropy.io.fits as pf
 
 from scipy.ndimage import center_of_mass as comass
 # would be worth giving this function a shot!
@@ -106,7 +107,7 @@ class WFS():
             print("%d CPUs available: %d requested" % (ncpumax, ncpu))
             self.mproc = True
             self.ncpu = ncpu
-            #self.pool = mp.Pool(ncpu) # split computation on CPU pool
+            self.pool = mp.Pool(ncpu) # split computation on CPU pool
 
     
     # =========================================================
@@ -181,8 +182,12 @@ class WFS():
             for ii in xrange(ncx):
                 #x0, x1 = int(np.round(xx[ii])), int(np.round(xx[ii+1]))
                 x0, x1 = xx[ii], xx[ii+1]
-                self.SH_xref[jj,ii] = 0.5 * (x1 - x0)
-                self.SH_yref[jj,ii] = 0.5 * (y1 - y0)
+                self.SH_xref[jj,ii] = np.round(0.5 * (x1 - x0)) + 1
+                self.SH_yref[jj,ii] = np.round(0.5 * (y1 - y0)) + 1
+
+        pf.writeto("SHrefx.fits", self.SH_xref, clobber=True)
+        pf.writeto("SHrefy.fits", self.SH_yref, clobber=True)
+        
 
     # =========================================================
     def update_grid(self, **kwargs):
@@ -238,26 +243,31 @@ class WFS():
             self.live_img = data
                     
         self.im_cnt = self.shm_im.get_counter()  # update image counter
-        bckgd = self.live_img.mean()             # estimate image background
-        self.live_img[self.live_img < self.threshold] = self.threshold
-        self.live_img -= self.threshold
-        self.live_img[self.live_img <=0] = 0.0
+        self.live_img[self.live_img < self.threshold] = 0.0#self.threshold
+        #self.live_img -= self.threshold
+        #self.live_img[self.live_img <=0] = 0.0
 
         # =======================================================
         # trying to write this the right way now...
         # optional self.pool.map(...)
-        # despite my efforts, the pool trick doesn't work with python2.7
+        # despite my efforts, the pool trick doesn't seem to work with python2.7
 
         if self.mproc is True:
-            pool = mp.Pool(self.ncpu) # split computation on CPU pool
-
+            # -------------------------------
+            # multi-processor scenario (TBC)
+            # -------------------------------
+            #pool = mp.Pool(self.ncpu) # split computation on CPU pool
             cen_list = np.array(list(pool.map(ext_centroid_position_cell, zip([self]*len(self.SH_cells), self.SH_cells))))
             max_list = np.array(list(pool.map(ext_max_cell, zip([self]*len(self.SH_cells), self.SH_cells))))
-            #cen_list = np.array(list(pool.map(self.centroid_position_cell, self.SH_cells)))
-            #max_list = np.array(list(pool.map(self.max_cell, self.SH_cells)))
-            pool.close()
+            #pool.close()
         else:
+            # -------------------------------
+            # this is the single CPU scenario
+            # -------------------------------
+
+            # get the list of centroid positions
             cen_list = np.array(list(map(self.centroid_position_cell, self.SH_cells)))
+            # and get the list of maximum values
             max_list = np.array(list(map(self.max_cell, self.SH_cells)))
 
         self.SH_phot = max_list.reshape((ncy,ncx)).astype('float')
@@ -267,15 +277,20 @@ class WFS():
         # populate the different data structures with the new info
         # =========================================================
         if ref is True:
+            print("NEW REFERENCE!")
             self.SH_xref = self.SH_xtmp.copy()
             self.SH_yref = self.SH_ytmp.copy()
+            pf.writeto("SHrefx.fits", self.SH_xref, clobber=True)
+            pf.writeto("SHrefy.fits", self.SH_yref, clobber=True)
 
         self.SH_xslp = self.SH_xtmp - self.SH_xref
         self.SH_yslp = (self.SH_ytmp - self.SH_yref)
 
         #self.SH_phot -= self.threshold
-        self.SH_xslp[self.SH_phot <= 0] = 0.0
-        self.SH_yslp[self.SH_phot <= 0] = 0.0
+        discard_them = self.SH_phot <= 1500#self.threshold * 2
+        self.SH_phot[discard_them] = 0.0
+        self.SH_xslp[discard_them] = 0.0
+        self.SH_yslp[discard_them] = 0.0
 
         self.SH_comb[0] = self.SH_xslp
         self.SH_comb[1] = self.SH_yslp
