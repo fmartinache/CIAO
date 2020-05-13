@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 import os
@@ -11,7 +11,7 @@ sys.path.append(home+'/src/python/libs/')
 
 #from scexao_shm import shm
 
-import pupil
+from xaosim.wavefront import kolmo
 from xaosim.shmlib import shm
 
 dms = 11            # DM size in actuators
@@ -89,18 +89,22 @@ except:
 
 # ------------------------------------
 
-kolm = 1.0*c0 * pupil.kolmo(r1, r2, 5.0, 2, correc=mycorrec, rms=myrms)
+kolm = 1.0*c0 * kolmo(r1, 5.0, 2, correc=mycorrec, rms=myrms)
 
 #kolm.dtype = np.float32
 print("Kolmo screen std = %.1f" % (kolm.std()))
 
-disp = shm('/tmp/dmdisp1.im.shm', data=kolm[:dms,:dms].astype(np.float32), 
+disp = shm('/dev/shm/dmdisp1.im.shm', data=kolm[:dms,:dms].astype(np.float32), 
            verbose=False)
+
+xdm, ydm = np.meshgrid(np.arange(dms)-dms//2, np.arange(dms)-dms//2)
+dmmask   = np.ones((dms, dms), dtype=np.int) # corner mask
+dmmask[np.abs(xdm) + np.abs(ydm) > 7] = 0.0
 
 kolm2 = np.tile(kolm,(2,2))
 kolm2 = kolm2[:xsz+2*dms,:ysz+2*dms]
 
-test = shm('/tmp/turb_test.im.shm', data=kolm2.astype(np.float32), verbose=False)
+test = shm('/dev/shm/turb_test.im.shm', data=kolm2.astype(np.float32), verbose=False)
 
 # -------------------------------------------
 
@@ -118,7 +122,7 @@ while keepgoing:
     #kolm2 = kolm2[:xsz+2*dms,:ysz+2*dms]
     k1 = kolm2[offx:offx+dms, offy:offy+dms].copy()
     k1 -= k1.mean()
-    disp.set_data(k1.astype(np.float32))
+    disp.set_data((k1*dmmask).astype(np.float32))
 
     # -------------------------------------------------
     # uncomment the following three lines to visualize
@@ -129,9 +133,9 @@ while keepgoing:
     # nothing
     # -------------------------------------------------
 
-    kolm2[offx:offx+dms,offy:offy+dms] *= 2.0
-    test.set_data(kolm2.astype(np.float32))
-    kolm2[offx:offx+dms,offy:offy+dms] /= 2.0
+    # kolm2[offx:offx+dms,offy:offy+dms] *= 2.0
+    # test.set_data(kolm2.astype(np.float32))
+    # kolm2[offx:offx+dms,offy:offy+dms] /= 2.0
     # -----------------------------------------
     time.sleep(mytime)
 
